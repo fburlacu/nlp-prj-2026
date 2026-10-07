@@ -1,0 +1,7 @@
+step,rows,documents,trustworthy,disinformation
+1. English rows in base,6546,6546,6121,425
+2. Crawled successfully,4334,4334,4016,318
+3. Text >= 700 chars,4084,4084,3775,309
+4. No boilerplate/paywall,4084,4084,3775,309
+5. Drop documents with both labels,4084,4052,3746,306
+7. Text detected as English,4055,4036,3733,303
