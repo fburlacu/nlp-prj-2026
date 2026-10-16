@@ -114,10 +114,156 @@ The final data contains **3,733 trustworthy** and **303 disinformation** documen
 
 ## 5. Linking articles to EEAS cases
 
-The Leite `debunk_id` is a UUID with no direct correspondence to the EEAS report slug, so articles are linked to cases heuristically:
-
-1. **Candidate cases.** For each disinformation article, a case is a candidate if its EEAS `Date` is within ±3 days of `debunk_date` and the `article_publisher` or `article_domain` appears in the case's `Outlets`.
-2. **Majority vote.** Candidates are aggregated per `debunk_id` by majority vote over its disinformation articles. Ties are discarded rather than guessed.
-3. **Conflicts.** Debunks mapped to a case that is also claimed by another `debunk_id` are discarded.
+The Leite `debunk_id` is a UUID with no direct correspondence to the EEAS report slug.
 
 
+## 6. EEAS query analysis and construction
+
+### 6.1 Initial analysis
+ 
+**Lexical overlap.** Overlap is the share of a title's words that also appear in a disproof. A first analysis on exact word forms (lowercased tokens of three or more letters) gave a mean overlap of 0.49 with the own disproof versus 0.18 with a random other disproof. The baseline reflects shared domain vocabulary (e.g. Russia, Ukraine, NATO). The additional overlap is case-specific: names, places and terms of the claim reappear in its disproof, partly because a disproof restates the claim in order to refute it. Real-world claims are unlikely to match their evidence this closely, which may favour lexical retrieval (BM25) on EEAS-title queries.
+ 
+**Issues found:**
+- **Length confounder.** In overlap tertiles, the low-overlap bin had much shorter disproofs (median 50 words vs. 172 and 209), so low overlap partly reflected little evidence text rather than different wording.
+- **Zero-overlap titles** were partly genuine paraphrases (e.g. "labs … bioweapons" vs. "laboratories … biological weapons") and partly morphological variants ("Crimeans" vs. "Crimea") missed by exact matching.
+- **Reused and placeholder disproofs.** Many disproofs reuse standard text for recurring narratives, and some are placeholders without evidence (e.g. "No evidence given.").
+
+### 6.2 Query pool
+ 
+All query statistics use the same preprocessing as the BM25 retriever ( lowercasing, English stopword removal, Snowball stemming). 
+
+The query pool contains cases with a title and a disproof of at least 30 words: **12,354 of 14,497 cases** (2,143 excluded). With BM25 tokens, mean title overlap is **0.56 with the own disproof versus 0.12 with a random disproof**. Stemming matches morphological variants, and stopword removal removes generic words from the baseline.
+ 
+| Overlap bin | Overlap range | Cases | Median disproof length (words) |
+|---|---|---:|---:|
+| Low | 0.00–0.44 | 4,234 | 124 |
+| Mid | 0.45–0.67 | 4,253 | 186 |
+| High | 0.69–1.00 | 3,867 | 213 |
+ 
+After excluding very short disproofs, the length confounder is weaker but still present. It is controlled through sampling.
+
+### 6.3 Near-duplicate cases
+ 
+Two cases are **near-duplicates** if their disproofs share at least 80% of their word 5-grams (Jaccard ≥ 0.8) or their titles share at least 80% of their words. This detects copied text, not semantically similar debunks: two independently written refutations of the same narrative are not near-duplicates. Candidate pairs are found with MinHash LSH and verified with exact Jaccard. Disproofs shorter than 10 words (705 cases, mostly placeholders such as "No evidence given.") are excluded from disproof matching, since identical placeholders would otherwise form one large spurious cluster.
+ 
+| Statistic | Value |
+|---|---:|
+| Near-duplicate disproof pairs | 1,701 |
+| Near-duplicate title pairs | 430 |
+| Cases with at least one near-duplicate | 1,863 (in 735 groups) |
+| Direct near-duplicates per pool case | mean 0.26, max 21 |
+ 
+Most near-duplicates are different claims sharing a standard refutation (different titles, same disproof text), or the same claim debunked again (same title, different disproof). Both are a real property of the database, and all near-duplicates remain in the index.
+ 
+Near-duplicates are used in two ways:
+- **Lenient gold.** For each case, the lenient gold set is the case itself plus its *direct* near-duplicates. Transitive groups are not used for scoring, because chaining (A ≈ B, B ≈ C) can join cases whose texts are not similar.
+- **Held-out cases.** Only cases without any near-duplicate (group size 1) are held out for inconclusive queries, so that no copy of their evidence remains in the index.
+
+### 6.4 Sampled EEAS queries
+ 
+| Query set | Size | Sampling | Gold |
+|---|---:|---|---|
+| Disinformation (EEAS titles) | 345 (300 test, 45 dev) | 115 per overlap bin, equally spread over disproof-length tertiles; cases with more than 10 direct near-duplicates (35) excluded | Strict: own disproof. Lenient: own disproof or a direct near-duplicate |
+| Inconclusive (held-out EEAS titles) | 345 (300 test, 45 dev) | Stratified by year; only cases without near-duplicates | None. The case is removed from the index (`held_out_links.csv`) |
+ 
+Median disproof length in the sampled disinformation queries is 173, 194 and 181 words for the low, mid and high overlap bins, so the bins differ in wording overlap rather than in amount of evidence text.
+ 
+**Limitation of the inconclusive set.** Excluding near-duplicates removes copied evidence, but not independently written debunks of the same recurring narrative. For some held-out claims, the system may therefore find valid evidence and correctly answer "disinformation". These cases are scored separately rather than counted as errors.
+ 
+**Retrieval scoring (planned).** Retrieval is reported per overlap bin, under the strict and the lenient criterion. For disinformation queries, the case's own claim passage is excluded at retrieval time.
+
+## 7. Leite query construction
+ 
+Leite article titles provide the fact queries (trustworthy articles) and a second set of disinformation queries in their original wording (disinformation articles). Queries are built per document (`doc_key`), not per row.
+ 
+### 7.1 Title cleaning
+ 
+Site names are stripped from titles ("NATO rejects Russian claims - BBC News" → "NATO rejects Russian claims"): a title is split on separators (`|`, `-`, `–`, `—`, `:`), and side parts of at most four words are removed. Documents without a usable title are dropped. This leaves 3,728 trustworthy and 303 disinformation documents.
+ 
+### 7.2 Fact queries
+ 
+**Fact-check exclusion.** Fact-checking articles cited in disproofs are often titled with the false claim they debunk (e.g. "Fact check: The Ukrainian military burned the Koran"). Title cleaning would strip the short prefix and leave a false claim labelled as fact. Trustworthy titles matching a fact-check / claim-reporting lexicon (fact check, fake, false, myth, debunk, hoax, misleading, disinformation, propaganda, claim(s), conspiracy, fabricated, not true) are therefore excluded from the fact queries. The lexicon is applied to the raw title, before cleaning, so that such prefixes are still visible. It is deliberately broad and also removes some ordinary reported claims ("Kremlin claims …"); this is acceptable given the surplus of candidates. **250 titles** were excluded (`excluded_factcheck_titles.csv`). These documents remain in the index as evidence.
+ 
+**Claim filter.** A trustworthy title is a fact query only if it asserts a checkable claim. Two filters are combined:
+- **Rule-based:** at least five words, not a question, and not starting with a format label ("Live", "Watch", "Opinion", "Explainer", "How", "What", …).
+- **LLM-based:** Qwen2.5-7B-Instruct with a few-shot yes/no prompt. The verdict is scored from the next-token probabilities of "Yes" and "No" (no sampling, deterministic).
+Inspection of the full run showed that between p(yes) ≈ 0.05 and 0.5, claims and non-claims overlap considerably. Because candidates are plentiful, the threshold was set for precision: **p(yes) ≥ 0.5 and the rule filter**, which keeps **1,994 of 3,728** titles (53%).
+ 
+**Debunk cap.** At most one document per debunk is used, counting all debunks a document is cited in, so no narrative dominates the fact queries.
+ 
+### 7.3 Leakage control and splits
+ 
+Documents are grouped into **leakage groups**: connected components over shared debunks (using all of a document's debunk links) and near-identical titles (word Jaccard ≥ 0.9, typically wire copies on several sites). Each group is assigned as a whole to dev (about 15% of groups) or test. Groups used in the article set, in either class, are excluded from the main set. As a result, no debunk or wire copy crosses dev/test or the two sets; the build script asserts this.
+ 
+For self-retrieval exclusion, every Leite query lists its own `doc_key` and the documents with near-identical titles in `exclude_doc_key`. These are removed from the retrieval results for that query.
+ 
+### 7.4 Sampled Leite queries
+ 
+| Query set | Label | Source | Sampling |
+|---|---|---|---|
+| Main | fact | Claim-like trustworthy titles | 345 (300 test, 45 dev), year-matched to the EEAS disinformation queries |
+| Article | disinformation | All 303 English disinformation titles | No claim filter (too few to spare); 23 would fail the rule filter. Split by leakage group |
+| Article | fact | Claim-like trustworthy titles | Same number as the disinformation articles per split, year-matched to them |
+ 
+Year matching (largest-remainder allocation over years) prevents the classes from being separable by period. Documents without a parseable year can only enter through top-up sampling.
+ 
+### 7.5 Proxy gold for article-level disinformation queries
+ 
+Leite queries have no exact gold evidence, because they cannot be linked to EEAS cases (Section 5). For disinformation article queries, we use **proxy relevance labels**: the trustworthy documents cited in the same EEAS debunk(s), i.e. the sources analysts chose to refute that claim, excluding the query's own document and wire copies (`gold_doc_keys`).
+ 
+- **Coverage:** 67 of 303 disinformation article queries have at least one such document.
+- **Scoring:** a hit if any chunk of a gold document is retrieved (proxy recall@k, MRR), reported on the test queries with proxy gold, with paired bootstrap confidence intervals.
+- **Fairness:** the labels come from analysts' citations, not from text similarity, so they favour no retrieval method.
+- **Limitations:** the labels are incomplete (other valid evidence, such as the unlinked EEAS disproof, counts as a miss), so absolute recall is underestimated. Some cited sources are background rather than refutation. Given the small sample, these results are exploratory and are used only to check whether the retriever ranking observed on EEAS titles also holds for original headlines.
+Fact queries have no gold evidence, since other articles from the same debunk may be background rather than corroboration. They are scored on the verdict only.
+ 
+### 7.6 Style-shortcut check
+ 
+A TF-IDF + logistic regression classifier trained on query text alone (no retrieval) indicates how far labels can be predicted from wording (5-fold macro-F1):
+ 
+| Set | Classes | Macro-F1 | Chance |
+|---|---|---:|---:|
+| Main | disinformation / fact | 0.83 | 0.50 |
+| Main | disinformation / fact / inconclusive | 0.52 | 0.33 |
+| Article | disinformation / fact | 0.63 | 0.50 |
+ 
+In the main set, disinformation queries are analyst-written EEAS titles while fact queries are journalist headlines, so the two classes are largely separable by style. Disinformation and inconclusive queries are both EEAS titles and cannot be separated from text alone, so only retrieval can distinguish them. In the article set, both classes are news headlines and the shortcut is much weaker. The text-only classifier is therefore reported as a no-retrieval baseline. RAG results on the main set are interpreted against it, and the article set serves as the main test of whether retrieved evidence improves detection.
+ 
+## 8. Final query set (`queries.csv`)
+ 
+`queries.csv` combines the EEAS and Leite queries. Only the `text` column is passed to the retriever and the LLM; all other columns are metadata for filtering, scoring and analysis.
+ 
+| Set | Label | Source | Dev | Test |
+|---|---|---|---:|---:|
+| Main | disinformation | EEAS titles (case in the index) | 45 | 300 |
+| Main | inconclusive | EEAS titles (case held out of the index) | 45 | 300 |
+| Main | fact | Leite trustworthy titles | 45 | 300 |
+| Article | disinformation | Leite disinformation titles | by group (~15%) | remainder of 303 |
+| Article | fact | Leite trustworthy titles | same as disinformation | same as disinformation |
+ 
+**Why two sets.** The main set provides exact retrieval gold (RQ1) and the inconclusive class, but mixes analyst-written disinformation queries with journalist-written fact queries. The article set uses original headlines for both classes and is therefore the realistic, style-matched test of detection (RQ2), but has only proxy retrieval gold for a subset. The main set is the primary benchmark; the article set checks whether the findings hold on real headlines.
+ 
+**Columns.**
+ 
+| Column | Content | Used for |
+|---|---|---|
+| `query_id` | Unique ID (`eeas_dis_…`, `eeas_inc_…`, `leite_fact_main_…`, `leite_fact_art_…`, `leite_dis_art_…`) | Joining results |
+| `text` | EEAS title or cleaned Leite headline | The only pipeline input |
+| `label` | disinformation / fact / inconclusive | Detection scoring (RQ2) |
+| `set`, `split` | main / article; dev / test | Test set, tuning vs reporting |
+| `source` | `eeas_title` / `leite_title` | Provenance |
+| `gold_links` | Own case `Links` (EEAS disinformation only) | Strict retrieval scoring (RQ1) |
+| `gold_links_lenient` | Own case plus direct near-duplicates | Lenient retrieval scoring |
+| `gold_doc_keys` | Same-debunk trustworthy documents (article-set disinformation only) | Proxy retrieval scoring |
+| `exclude_passage_ids` | Own claim passage (EEAS disinformation) | Self-retrieval exclusion |
+| `exclude_doc_key` | Own document and wire copies (Leite queries) | Self-retrieval exclusion |
+| `case_links` | Case the EEAS title came from | Tracing; held-out case for inconclusive queries |
+| `overlap`, `overlap_bin`, `disproof_len` | Title–disproof overlap, its bin, disproof length (EEAS) | RQ1 results per bin; length control |
+| `date` | Case date / `debunk_date` | Year matching, time coverage |
+| `doc_key`, `debunk_id`, `leak_group` | Document, all its debunks, leakage group (Leite) | Tracing, leakage control |
+ 
+**Known caveats.**
+1. **Style shortcut in the main set** (Section 7.6). Reported as a text-only baseline.
+2. **Lexical closeness of EEAS titles to their evidence** (Section 6.2), addressed by reporting results per overlap bin.
+3. **"Fact" is a proxy:** a cited trustworthy source with a claim-like title, not a verified true claim.
+4. **No exact retrieval gold for Leite queries** (Section 5): article-level retrieval is evaluated only through proxy gold for 67 queries.
