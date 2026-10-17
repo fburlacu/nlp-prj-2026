@@ -26,6 +26,9 @@ ap.add_argument("--claim_like_file")
 ap.add_argument("--no_rule", action="store_true",
                 help="with --claim_like_file: do NOT additionally require the rule-based filter")
 ap.add_argument("--max_per_debunk", type=int, default=1)
+ap.add_argument("--main_fact_set", default="extra",
+                help="set name for the trustworthy titles sampled to match the EEAS queries: 'extra' "
+                     "(default; kept out of the main set because of the style shortcut) or 'main'")
 ap.add_argument("--main_fact_test", type=int, default=300)
 ap.add_argument("--main_fact_dev", type=int, default=45)
 ap.add_argument("--dev_frac", type=float, default=0.15, help="share of groups assigned to dev")
@@ -203,7 +206,7 @@ def rows(df, label, set_name, prefix):
         "gold_doc_keys": df["gold_doc_keys"].values if "gold_doc_keys" in df else "",
     })
  
-ql = pd.concat([rows(main_fact, "fact", "main", "leite_fact_main"),
+ql = pd.concat([rows(main_fact, "fact", a.main_fact_set, f"leite_fact_{a.main_fact_set}"),
                 rows(art_fact, "fact", "article", "leite_fact_art"),
                 rows(dis, "disinformation", "article", "leite_dis_art")])
 ql.to_csv(out("queries_leite.csv"), index=False)
@@ -218,12 +221,14 @@ try:
     from sklearn.linear_model import LogisticRegression
     from sklearn.model_selection import cross_val_score
     print("\nStyle-shortcut check (TF-IDF + logistic regression on query text only, 5-fold macro-F1):")
-    for s, pair in [("main", ["disinformation", "fact"]), ("main", ["disinformation", "inconclusive"]),
-                    ("main", ["disinformation", "fact", "inconclusive"]), ("article", ["disinformation", "fact"])]:
-        d = allq[(allq["set"] == s) & allq["label"].isin(pair)]
+    checks = [(["main"], ["disinformation", "inconclusive"]), (["article"], ["disinformation", "fact"]),
+              (["main", a.main_fact_set], ["disinformation", "fact"])]   # last: shortcut if fact were in main
+    for sets_, pair in checks:
+        d = allq[allq["set"].isin(sets_) & allq["label"].isin(pair)]
+        s = "+".join(dict.fromkeys(sets_))
         X = TfidfVectorizer(ngram_range=(1, 2), min_df=2, sublinear_tf=True).fit_transform(d["text"])
         f1 = cross_val_score(LogisticRegression(max_iter=1000), X, d["label"], cv=5, scoring="f1_macro")
-        print(f"  {s:<8} {'/'.join(pair):<36} {f1.mean():.2f} (chance ~{1 / len(pair):.2f})")
+        print(f"  {s:<12} {'/'.join(pair):<30} {f1.mean():.2f} (chance ~{1 / len(pair):.2f})")
 except ImportError:
     print("\n(style check skipped: pip install scikit-learn)")
 print(f"\nWrote outputs to {os.path.abspath(a.out_dir)}")

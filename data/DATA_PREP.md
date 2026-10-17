@@ -217,17 +217,29 @@ Leite queries have no exact gold evidence, because they cannot be linked to EEAS
 - **Limitations:** the labels are incomplete (other valid evidence, such as the unlinked EEAS disproof, counts as a miss), so absolute recall is underestimated. Some cited sources are background rather than refutation. Given the small sample, these results are exploratory and are used only to check whether the retriever ranking observed on EEAS titles also holds for original headlines.
 Fact queries have no gold evidence, since other articles from the same debunk may be background rather than corroboration. They are scored on the verdict only.
  
-### 7.6 Style-shortcut check
  
-A TF-IDF + logistic regression classifier trained on query text alone (no retrieval) indicates how far labels can be predicted from wording (5-fold macro-F1):
+### 7.6 Style-shortcut check and final set roles
  
-| Set | Classes | Macro-F1 | Chance |
-|---|---|---:|---:|
-| Main | disinformation / fact | 0.83 | 0.50 |
-| Main | disinformation / fact / inconclusive | 0.52 | 0.33 |
-| Article | disinformation / fact | 0.63 | 0.50 |
+A TF-IDF + logistic regression classifier trained on query text alone (unigrams and bigrams, no retrieval) indicates how far labels can be predicted from wording (5-fold cross-validated macro-F1). In the initial design, the main set contained disinformation, fact and inconclusive queries.
  
-In the main set, disinformation queries are analyst-written EEAS titles while fact queries are journalist headlines, so the two classes are largely separable by style. Disinformation and inconclusive queries are both EEAS titles and cannot be separated from text alone, so only retrieval can distinguish them. In the article set, both classes are news headlines and the shortcut is much weaker. The text-only classifier is therefore reported as a no-retrieval baseline. RAG results on the main set are interpreted against it, and the article set serves as the main test of whether retrieved evidence improves detection.
+**Initial finding.** In that design, EEAS disinformation titles and fact headlines were separable at 0.83 macro-F1. The most predictive features were mainly stylistic:
+- **Fact (news headlines):** headline grammar and reporting words, e.g. "says", "over", "after", "on", "as", "for", plus event topics (Belarus, Putin, Covid, election, protests).
+- **Disinformation (EEAS titles):** full-sentence grammar, e.g. "the", "is", "was", "has", "will", "not", "because", plus narrative topics ("the West", NATO, the US, the EU, coup).
+Mean length was similar (11.2 vs 10.4 words). The difference is therefore mostly one of writing style (analyst-written sentences vs headlinese), which a verdict model could exploit without using evidence.
+ 
+**Final set roles.** Fact queries were removed from the main set:
+- **Main set:** EEAS disinformation vs inconclusive (held-out) titles. Both are written in the same style, so only retrieval can separate them. Used for RQ1 (exact retrieval gold) and for abstention when evidence is missing.
+- **Article set:** disinformation vs fact, both original news headlines. Used for RQ2 (distinguishing true from false claims).
+- **Extra:** the 345 fact headlines matched to the EEAS queries, kept but not part of either benchmark.
+**Final check.**
+ 
+| Comparison | Macro-F1 | Chance |
+|---|---:|---:|
+| Main: disinformation / inconclusive | 0.48 | 0.50 |
+| Article: disinformation / fact | 0.61 | 0.50 |
+| Main + extra: disinformation / fact (shortcut avoided by the final design) | 0.83 | 0.50 |
+ 
+The main set is at chance level, so differences between its classes can only come from retrieved evidence. The article set retains a weak signal (0.61), mainly topical: disinformation concentrates on particular narratives. The text-only classifier is reported as a no-retrieval baseline that the RAG system has to beat on the article set.
  
 ## 8. Final query set (`queries.csv`)
  
@@ -267,3 +279,31 @@ In the main set, disinformation queries are analyst-written EEAS titles while fa
 2. **Lexical closeness of EEAS titles to their evidence** (Section 6.2), addressed by reporting results per overlap bin.
 3. **"Fact" is a proxy:** a cited trustworthy source with a claim-like title, not a verified true claim.
 4. **No exact retrieval gold for Leite queries** (Section 5): article-level retrieval is evaluated only through proxy gold for 67 queries.
+
+
+## 9. Retrieval index (`passages.parquet`)
+ 
+A single index containing three passage types, each with a `doc_type` field. Built with `build_index.py`.
+ 
+| Passage | ID | Text |
+|---|---|---|
+| EEAS claim | `<Links>#claim` | `Title` + `Disinformation` summary |
+| EEAS disproof | `<Links>#disproof-<n>` | `Information` only (titles are used as queries), split into chunks |
+| Article chunk | `<doc_key>#<n>` | Cleaned article title + chunk of a trustworthy document |
+ 
+**Chunking.** Articles and disproofs are split at sentence boundaries into chunks of about 150 words (hard cap 220 words; sentences above the cap are split, and tails under 30 words are merged into the previous chunk). The cap keeps every chunked passage within the input limit of common dense encoders, so that BM25 and dense retrievers see the same text. Each article chunk is prefixed with the cleaned title. Claim passages are not chunked (90% are under 120 words).
+ 
+**Long documents.** Some cited trustworthy sources are not news articles but legal codes, institutional sites, research reports or live blogs (the longest has 81,158 words). Each article is limited to its first 20 chunks (about 3,000 words). This affects 224 documents and prevents single long sources from dominating retrieval for their topic.
+ 
+**Excluded:** the 345 held-out cases (`held_out_links.csv`), 705 disproofs shorter than 10 words (placeholders such as "No evidence given."), all disinformation articles, and all class labels.
+ 
+**Index statistics.**
+ 
+| Passage type | Passages | Source units | Words (10% / median / 90% / max) |
+|---|---:|---|---|
+| EEAS claim | 14,152 | 14,152 cases | 25 / 54 / 119 / 443 |
+| EEAS disproof | 22,346 | 13,447 disproofs | 37 / 114 / 146 / 220 |
+| Article chunk | 25,148 | 3,733 documents (median 5 chunks, max 20) | 118 / 147 / 159 / 195 |
+| **Total** | **61,646** | | |
+ 
+**Gold matching.** Gold is stored per case (`gold_links`, `gold_links_lenient`) and per document (`gold_doc_keys`), not per passage. A retrieved passage is a hit if it is an `eeas_disproof` whose `case_links` is in the query's gold cases, or an `article` chunk whose `doc_key` is in `gold_doc_keys`. Any chunk of a gold disproof or document therefore counts. Self-retrieval exclusion removes `<Links>#claim` (EEAS queries) and all chunks of the documents in `exclude_doc_key` (Leite queries).
