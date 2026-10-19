@@ -1,0 +1,192 @@
+{
+  "retriever": "dense",
+  "splits": {
+    "test": {
+      "n_queries": 1404,
+      "retrieval": {
+        "strict_eeas_disproof": {
+          "all": {
+            "n": 300,
+            "mrr": 0.179,
+            "recall@1": 0.11,
+            "recall@5": 0.2733,
+            "recall@10": 0.3167
+          },
+          "by_overlap_bin": {
+            "high": {
+              "n": 100,
+              "mrr": 0.3279,
+              "recall@1": 0.22,
+              "recall@5": 0.48,
+              "recall@10": 0.51
+            },
+            "low": {
+              "n": 100,
+              "mrr": 0.0621,
+              "recall@1": 0.03,
+              "recall@5": 0.1,
+              "recall@10": 0.13
+            },
+            "mid": {
+              "n": 100,
+              "mrr": 0.1468,
+              "recall@1": 0.08,
+              "recall@5": 0.24,
+              "recall@10": 0.31
+            }
+          }
+        },
+        "lenient_eeas_disproof": {
+          "all": {
+            "n": 300,
+            "mrr": 0.1794,
+            "recall@1": 0.11,
+            "recall@5": 0.2767,
+            "recall@10": 0.3167
+          },
+          "by_overlap_bin": {
+            "high": {
+              "n": 100,
+              "mrr": 0.3279,
+              "recall@1": 0.22,
+              "recall@5": 0.48,
+              "recall@10": 0.51
+            },
+            "low": {
+              "n": 100,
+              "mrr": 0.0621,
+              "recall@1": 0.03,
+              "recall@5": 0.1,
+              "recall@10": 0.13
+            },
+            "mid": {
+              "n": 100,
+              "mrr": 0.1481,
+              "recall@1": 0.08,
+              "recall@5": 0.25,
+              "recall@10": 0.31
+            }
+          }
+        },
+        "proxy_article_gold": {
+          "all": {
+            "n": 53,
+            "mrr": 0.1209,
+            "recall@1": 0.0377,
+            "recall@5": 0.2264,
+            "recall@10": 0.3019
+          }
+        },
+        "top1_doc_type": {
+          "eeas_claim": 651,
+          "eeas_disproof": 413,
+          "article": 340
+        }
+      },
+      "generator": {
+        "article": {
+          "n": 504,
+          "accuracy": 0.2024,
+          "macro_f1": 0.2399,
+          "per_label": {
+            "disinformation": {
+              "precision": 1.0,
+              "recall": 0.0079,
+              "f1": 0.0157,
+              "support": 252
+            },
+            "fact": {
+              "precision": 0.5587,
+              "recall": 0.3968,
+              "f1": 0.464,
+              "support": 252
+            }
+          },
+          "confusion": {
+            "disinformation|disinformation": 2,
+            "disinformation|fact": 79,
+            "disinformation|inconclusive": 171,
+            "fact|fact": 100,
+            "fact|inconclusive": 152
+          },
+          "mean_probability": {
+            "disinformation": {
+              "p_disinformation": 0.2071,
+              "p_fact": 0.3525,
+              "p_inconclusive": 0.4405
+            },
+            "fact": {
+              "p_disinformation": 0.1729,
+              "p_fact": 0.4041,
+              "p_inconclusive": 0.423
+            }
+          }
+        },
+        "extra": {
+          "n": 300,
+          "accuracy": 0.4533,
+          "macro_f1": 0.6239,
+          "per_label": {
+            "fact": {
+              "precision": 1.0,
+              "recall": 0.4533,
+              "f1": 0.6239,
+              "support": 300
+            }
+          },
+          "confusion": {
+            "fact|disinformation": 1,
+            "fact|fact": 136,
+            "fact|inconclusive": 163
+          },
+          "mean_probability": {
+            "fact": {
+              "p_disinformation": 0.1673,
+              "p_fact": 0.4215,
+              "p_inconclusive": 0.4113
+            }
+          }
+        },
+        "main": {
+          "n": 600,
+          "accuracy": 0.38,
+          "macro_f1": 0.3064,
+          "per_label": {
+            "disinformation": {
+              "precision": 0.5,
+              "recall": 0.0067,
+              "f1": 0.0132,
+              "support": 300
+            },
+            "inconclusive": {
+              "precision": 0.4978,
+              "recall": 0.7533,
+              "f1": 0.5995,
+              "support": 300
+            }
+          },
+          "confusion": {
+            "disinformation|disinformation": 2,
+            "disinformation|fact": 70,
+            "disinformation|inconclusive": 228,
+            "inconclusive|disinformation": 2,
+            "inconclusive|fact": 72,
+            "inconclusive|inconclusive": 226
+          },
+          "mean_probability": {
+            "disinformation": {
+              "p_disinformation": 0.2028,
+              "p_fact": 0.3192,
+              "p_inconclusive": 0.478
+            },
+            "inconclusive": {
+              "p_disinformation": 0.1934,
+              "p_fact": 0.3307,
+              "p_inconclusive": 0.4759
+            }
+          }
+        }
+      }
+    }
+  }
+}
