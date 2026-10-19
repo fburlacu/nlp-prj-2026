@@ -25,7 +25,7 @@ Later jobs only need `module load anaconda3/2025.06` and `conda activate nlp-prj
 
 ## Hugging Face
 
-Llama 3.1 8B Instruct is a gated model. Accept the license on the model page, then, on the head node:
+Llama 3.1 8B Instruct is a gated model. Accept its license on the model page, then log in on the head node. If that approval is slow, pass another instruct model with `--model`. Keep it outside the Qwen family, because Qwen already built the fact-query filter. `HuggingFaceTB/SmolLM2-1.7B-Instruct` needs no approval.
 
 ```bash
 huggingface-cli login

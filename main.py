@@ -1,6 +1,7 @@
 """One command for retrieval plus the verdict generator.
 
   python main.py --retriever dense
+  python main.py --retriever dense --model HuggingFaceTB/SmolLM2-1.7B-Instruct
   python main.py --retriever dense --split dev --limit 5 --retrieve-only
 
 sparse and hybrid share this command and are filled in later. A reranker, when
@@ -78,6 +79,8 @@ def main():
     ap.add_argument("--k", type=int, default=10, help="passages kept per query")
     ap.add_argument("--max-passages", type=int, default=5,
                     help="how many of those passages the generator sees")
+    ap.add_argument("--model", default=None,
+                    help="generator model; default is Llama-3.1-8B-Instruct. Do not use Qwen")
     args = ap.parse_args()
 
     if args.reranker != "none":
@@ -91,12 +94,17 @@ def main():
         return
 
     from generator.generator import run as generate
+    generate_kwargs = dict(
+        max_passages=args.max_passages,
+        limit=args.limit,
+    )
+    if args.model:
+        generate_kwargs["model"] = args.model
     generate(
         run_path,
         ROOT / "generator" / f"verdicts_{args.retriever}.csv",
         ROOT / "generator" / f"verdict_cache_{args.retriever}.jsonl",
-        max_passages=args.max_passages,
-        limit=args.limit,
+        **generate_kwargs,
     )
 
 
