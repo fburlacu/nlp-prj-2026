@@ -1,0 +1,28 @@
+{
+  "created_utc": "2026-10-19T11:25:59+00:00",
+  "files": {
+    "queries.csv": "adcd0064fdcfb99f10fd9bb1292df34ec4a71c789dbc7abb0cb29a5bcfb2d08e",
+    "passages.parquet": "01642a1d62063fb9a360504af097f4c4598caf98b53dd9447b5ec8ccd05c3ba0",
+    "held_out_links.csv": "cb97340f50b5213b577438b817fed3180eeb99e7584c4b0b6acea7099d5bb02e"
+  },
+  "queries": {
+    "article/disinformation/dev": 51,
+    "article/disinformation/test": 252,
+    "article/fact/dev": 51,
+    "article/fact/test": 252,
+    "extra/fact/dev": 45,
+    "extra/fact/test": 300,
+    "main/disinformation/dev": 45,
+    "main/disinformation/test": 300,
+    "main/inconclusive/dev": 45,
+    "main/inconclusive/test": 300
+  },
+  "passages": {
+    "article": 25148,
+    "eeas_disproof": 22346,
+    "eeas_claim": 14152
+  },
+  "warnings": [
+    "2 queries share their text with another query"
+  ]
+}
