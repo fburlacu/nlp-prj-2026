@@ -1,0 +1,75 @@
+{
+  "model": "meta-llama/Llama-3.1-8B-Instruct",
+  "device": "cuda",
+  "dtype": "torch.float16",
+  "created_utc": "2026-10-20T17:58:02+00:00",
+  "command": "detect.py --run ../runs_test/sensitivity/bm25_test_k1-1.5_b-0.3.parquet --split test --k 5 --output preds/test/bm25_sens_k5.csv",
+  "mode": "rag",
+  "params": {
+    "k": 5,
+    "batch_size": 8,
+    "max_passage_words": 250,
+    "answers": {
+      "false": "disinformation",
+      "true": "fact",
+      "unknown": "inconclusive"
+    },
+    "answer_tokens": {
+      "false": [
+        "false",
+        "False",
+        "FALSE"
+      ],
+      "true": [
+        "true",
+        "True",
+        "TRUE"
+      ],
+      "unknown": [
+        "Unknown",
+        "unknown",
+        "UNKNOWN"
+      ]
+    },
+    "scoring": "next-token probability mass per answer word, renormalised; argmax"
+  },
+  "prompt": {
+    "system": "You are a fact-checking assistant. You judge whether a claim is disinformation, using only the evidence you are given. Answer with exactly one word: false, true or unknown.",
+    "user": "Claim: {claim}\n\nEvidence:\n{evidence}\n\nBased only on the evidence above, is the claim:\nfalse - the evidence refutes the claim, or shows that it is a documented disinformation narrative\ntrue - the evidence supports the claim\nunknown - the evidence is not sufficient to decide\n\nAnswer with one word (false, true or unknown).",
+    "passage_types": {
+      "eeas_claim": "EUvsDisinfo database: documented disinformation claim",
+      "eeas_disproof": "EUvsDisinfo database: analysts' refutation",
+      "article": "News article"
+    }
+  },
+  "filters": {
+    "split": "test",
+    "sets": [
+      "main",
+      "article"
+    ],
+    "limit": null
+  },
+  "inputs": {
+    "run": "/home/s2872927/nlp-prj-2026/sparse_bm25/runs_test/sensitivity/bm25_test_k1-1.5_b-0.3.parquet",
+    "run_sha256": "3f71411e47cf42dd5ebcbebdb6a07d93578016e1dbc546457bae01bab547339d",
+    "queries": "/home/s2872927/nlp-prj-2026/data/queries.csv",
+    "queries_sha256": "adcd0064fdcfb99f10fd9bb1292df34ec4a71c789dbc7abb0cb29a5bcfb2d08e"
+  },
+  "counts": {
+    "n_predictions": 1104,
+    "pred_distribution": {
+      "disinformation": 872,
+      "fact": 193,
+      "inconclusive": 39
+    }
+  },
+  "timing_this_session": {
+    "model_load_s": 12.4,
+    "n_queries": 1104,
+    "llm_s_per_query": 0.2841,
+    "prompt_tokens_mean": 981.0,
+    "gpu_peak_mem_gb": 18.11
+  },
+  "prompt_tokens_mean_all": 981.0
+}

@@ -30,6 +30,7 @@ from pathlib import Path
 
 import pandas as pd
 import torch
+from huggingface_hub import try_to_load_from_cache
 from transformers import AutoTokenizer, AutoModelForCausalLM
 
 MODEL = "meta-llama/Llama-3.1-8B-Instruct"
@@ -66,8 +67,8 @@ Answer with one word (false, true or unknown)."""
 HERE = Path(__file__).resolve().parent
 ap = argparse.ArgumentParser()
 ap.add_argument("--run", help="retrieval run file (.parquet); omit for the no-retrieval baseline")
-ap.add_argument("--passages", default=str(HERE.parent / "data" / "passages.parquet"))
-ap.add_argument("--queries", default=str(HERE.parent / "data" / "queries.csv"))
+ap.add_argument("--passages", default=str(HERE.parent.parent / "data" / "passages.parquet"))
+ap.add_argument("--queries", default=str(HERE.parent.parent / "data" / "queries.csv"))
 ap.add_argument("--output", required=True, help="predictions file (.csv)")
 ap.add_argument("--split", choices=["dev", "test"], help="only queries from this split")
 ap.add_argument("--k", type=int, default=5, help="passages given to the LLM")
@@ -122,14 +123,25 @@ def prompt(q):
 
 # ---------------- model ----------------
 device = "cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu"
-dtype = torch.bfloat16 if device == "cuda" else torch.float16 if device == "mps" else torch.float32
-print(f"Loading {MODEL} on {device} ({dtype})", flush=True)
+if device == "cuda":                           # bf16 is emulated (slow) on pre-Ampere GPUs, e.g. Turing
+    dtype = torch.bfloat16 if torch.cuda.is_bf16_supported(including_emulation=False) else torch.float16
+else:
+    dtype = torch.float16 if device == "mps" else torch.float32
+# model already downloaded -> no hub requests (compute nodes without internet wait for timeouts)
+cached = isinstance(try_to_load_from_cache(MODEL, "config.json"), str)
+try:
+    import accelerate  # noqa: F401
+    to_device = {"device_map": device}         # load shards straight onto the device
+except ImportError:
+    to_device = {}                             # load into CPU memory, then move
+print(f"Loading {MODEL} on {device} ({dtype}) | local cache: {cached} | direct to device: {bool(to_device)}", flush=True)
 t0 = time.perf_counter()
-tok = AutoTokenizer.from_pretrained(MODEL)
+tok = AutoTokenizer.from_pretrained(MODEL, local_files_only=cached)
 tok.padding_side = "left"                      # last position = next-token position for every row
 if tok.pad_token is None:
     tok.pad_token = tok.eos_token
-model = AutoModelForCausalLM.from_pretrained(MODEL, torch_dtype=dtype).to(device).eval()
+model = AutoModelForCausalLM.from_pretrained(MODEL, dtype=dtype, local_files_only=cached, **to_device)
+model = model.to(device).eval()
 load_s = time.perf_counter() - t0
 # compute logits for the last position only (full logits: batch x prompt length x 128k vocabulary)
 fwd_params = inspect.signature(model.forward).parameters

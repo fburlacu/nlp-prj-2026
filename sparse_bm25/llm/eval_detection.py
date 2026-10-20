@@ -38,7 +38,7 @@ HIT_LEVEL = {"main": "case", "article": "proxy"}
 HERE = Path(__file__).resolve().parent
 ap = argparse.ArgumentParser()
 ap.add_argument("--preds", nargs="+", required=True, help="prediction files; the first is the baseline")
-ap.add_argument("--queries", default=str(HERE.parent / "data" / "queries.csv"))
+ap.add_argument("--queries", default=str(HERE.parent.parent / "data" / "queries.csv"))
 ap.add_argument("--retrieval", help="optional per_query.csv from eval_retrieval.py, for the hit/miss breakdown")
 ap.add_argument("--output", required=True, help="summary file (.csv)")
 a = ap.parse_args()
@@ -216,7 +216,7 @@ md += ["## Cost", "", "| File | Mode | k | Prompt tokens (mean) | LLM s / query 
 md += [f"| {n} | {c['mode']} | {c['k']} | {c['prompt_tokens_mean']} | {c['llm_s_per_query']} | {c['gpu_peak_mem_gb']} | "
        f"{c['retrieval_ms_per_query'] if c['retrieval_ms_per_query'] is not None else '–'} |" for n, c in costs.items()]
 md += ["", f"Command: `{' '.join(sys.argv)}`", ""]
-out.with_suffix(".md").write_text("\n".join(md))
+out.with_suffix(".md").write_text("\n".join(md), encoding="utf-8")
 
 view = summary[(summary["group"] == "all") & summary["metric"].isin(["accuracy", "macro_f1", "recall_disinformation"])]
 print(view.pivot_table(index=["preds", "set", "split"], columns="metric", values="mean", sort=False).round(3).to_string())
