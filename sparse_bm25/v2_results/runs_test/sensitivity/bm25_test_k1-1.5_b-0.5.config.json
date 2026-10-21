@@ -1,7 +1,7 @@
 {
   "retriever": "bm25",
-  "created_utc": "2026-10-21T10:52:11+00:00",
-  "command": "retrieve.py --passages ../data/passages_v2.parquet --queries ../data/queries_v2.csv --set main --split test --k1 1.5 --b 0.5 --output v2_results/runs_test/sensitivity/bm25_test_k1-1.5_b-0.5.parquet",
+  "created_utc": "2026-10-21T11:33:49+00:00",
+  "command": "retrieve.py --passages ../data/passages_v2.parquet --queries ../data/queries_v2.csv --split test --k1 1.5 --b 0.5 --output v2_results/runs_test/sensitivity/bm25_test_k1-1.5_b-0.5.parquet",
   "params": {
     "k1": 1.5,
     "b": 0.5,
@@ -11,7 +11,7 @@
   },
   "filters": {
     "split": "test",
-    "set": "main"
+    "set": null
   },
   "inputs": {
     "passages": "/Users/fel/Documents/uni/nlp/project/data/passages_v2.parquet",
@@ -21,23 +21,27 @@
   },
   "counts": {
     "n_passages": 38595,
-    "n_queries": 600,
-    "n_rows": 60000,
+    "n_queries": 1404,
+    "n_rows": 110400,
     "passages_by_set": {
+      "article": 25148,
       "main": 13447
     },
-    "vocabulary": 19803,
-    "nonzeros": 1017633,
+    "vocabulary": 71511,
+    "nonzeros": 2723803,
     "queries_by_set_label_split": {
+      "article/disinformation/test": 252,
+      "article/fact/test": 252,
+      "extra/fact/test": 300,
       "main/disinformation/test": 300,
       "main/inconclusive/test": 300
     }
   },
   "timing": {
-    "index_build_s": 1.25,
-    "index_weights_mb": 7.8,
-    "query_ms_p50": 0.435,
-    "query_ms_p95": 0.533,
-    "query_ms_mean": 0.437
+    "index_build_s": 3.3,
+    "index_weights_mb": 20.8,
+    "query_ms_p50": 0.442,
+    "query_ms_p95": 0.59,
+    "query_ms_mean": 0.394
   }
 }

@@ -1,6 +1,6 @@
 {
   "config": {
-    "command": "eval_retrieval.py --runs v2_results/runs_test/default/bm25_test_k1-1.2_b-0.75.parquet --passages ../data/passages_v2.parquet --queries ../data/queries_v2.csv --set main --split test --output v2_results/results/test_default/retrieval_test.csv",
+    "command": "eval_retrieval.py --runs v2_results/runs_test/default/bm25_test_k1-1.2_b-0.75.parquet --passages ../data/passages_v2.parquet --queries ../data/queries_v2.csv --split test --output v2_results/results/test_default/retrieval_test.csv",
     "runs": [
       "v2_results/runs_test/default/bm25_test_k1-1.2_b-0.75.parquet"
     ],
@@ -8,7 +8,7 @@
     "queries": "../data/queries_v2.csv",
     "output": "v2_results/results/test_default/retrieval_test.csv",
     "split": "test",
-    "qset": "main",
+    "qset": null,
     "ks": [
       1,
       5,
@@ -948,6 +948,160 @@
               "ci95": [
                 0.1443,
                 0.2521
+              ]
+            }
+          }
+        }
+      },
+      "proxy": {
+        "article/test": {
+          "all": {
+            "hit@1": {
+              "n": 53,
+              "mean": 0.2453,
+              "ci95": [
+                0.1321,
+                0.3774
+              ]
+            },
+            "hit@5": {
+              "n": 53,
+              "mean": 0.3585,
+              "ci95": [
+                0.2453,
+                0.4906
+              ]
+            },
+            "hit@10": {
+              "n": 53,
+              "mean": 0.4151,
+              "ci95": [
+                0.283,
+                0.5472
+              ]
+            },
+            "hit@20": {
+              "n": 53,
+              "mean": 0.5283,
+              "ci95": [
+                0.3962,
+                0.6604
+              ]
+            },
+            "hit@100": {
+              "n": 53,
+              "mean": 0.717,
+              "ci95": [
+                0.5849,
+                0.8302
+              ]
+            },
+            "mrr@10": {
+              "n": 53,
+              "mean": 0.2861,
+              "ci95": [
+                0.1792,
+                0.4012
+              ]
+            }
+          },
+          "entity": {
+            "hit@1": {
+              "n": 23,
+              "mean": 0.3913,
+              "ci95": [
+                0.1739,
+                0.5652
+              ]
+            },
+            "hit@5": {
+              "n": 23,
+              "mean": 0.6087,
+              "ci95": [
+                0.4348,
+                0.7826
+              ]
+            },
+            "hit@10": {
+              "n": 23,
+              "mean": 0.6522,
+              "ci95": [
+                0.4772,
+                0.8261
+              ]
+            },
+            "hit@20": {
+              "n": 23,
+              "mean": 0.7391,
+              "ci95": [
+                0.5652,
+                0.913
+              ]
+            },
+            "hit@100": {
+              "n": 23,
+              "mean": 1.0,
+              "ci95": [
+                1.0,
+                1.0
+              ]
+            },
+            "mrr@10": {
+              "n": 23,
+              "mean": 0.4634,
+              "ci95": [
+                0.275,
+                0.6428
+              ]
+            }
+          },
+          "formulation": {
+            "hit@1": {
+              "n": 30,
+              "mean": 0.1333,
+              "ci95": [
+                0.0333,
+                0.2667
+              ]
+            },
+            "hit@5": {
+              "n": 30,
+              "mean": 0.1667,
+              "ci95": [
+                0.0333,
+                0.3333
+              ]
+            },
+            "hit@10": {
+              "n": 30,
+              "mean": 0.2333,
+              "ci95": [
+                0.1,
+                0.4
+              ]
+            },
+            "hit@20": {
+              "n": 30,
+              "mean": 0.3667,
+              "ci95": [
+                0.2,
+                0.5333
+              ]
+            },
+            "hit@100": {
+              "n": 30,
+              "mean": 0.5,
+              "ci95": [
+                0.3,
+                0.6667
+              ]
+            },
+            "mrr@10": {
+              "n": 30,
+              "mean": 0.1501,
+              "ci95": [
+                0.0418,
+                0.2752
               ]
             }
           }

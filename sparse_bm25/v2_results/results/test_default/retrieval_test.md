@@ -36,4 +36,12 @@ Rows: all queries, then by title–disproof word overlap (`overlap_bin`), by dis
 | formulation-driven | 175 | 0.15 [0.11, 0.21] | 0.24 [0.18, 0.30] | 0.30 [0.23, 0.37] | 0.42 [0.34, 0.48] | 0.63 [0.56, 0.69] | 0.20 [0.14, 0.25] |
 | **all** | 300 | 0.21 [0.17, 0.26] | 0.34 [0.29, 0.40] | 0.41 [0.36, 0.47] | 0.53 [0.47, 0.58] | 0.72 [0.67, 0.77] | 0.27 [0.23, 0.32] |
 
-Command: `eval_retrieval.py --runs v2_results/runs_test/default/bm25_test_k1-1.2_b-0.75.parquet --passages ../data/passages_v2.parquet --queries ../data/queries_v2.csv --set main --split test --output v2_results/results/test_default/retrieval_test.csv`
+### bm25_test_k1-1.2_b-0.75 · proxy · article/test
+
+| Bin | n | hit@1 | hit@5 | hit@10 | hit@20 | hit@100 | mrr@10 |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| entity-driven | 23 | 0.39 [0.17, 0.57] | 0.61 [0.43, 0.78] | 0.65 [0.48, 0.83] | 0.74 [0.57, 0.91] | 1.00 [1.00, 1.00] | 0.46 [0.27, 0.64] |
+| formulation-driven | 30 | 0.13 [0.03, 0.27] | 0.17 [0.03, 0.33] | 0.23 [0.10, 0.40] | 0.37 [0.20, 0.53] | 0.50 [0.30, 0.67] | 0.15 [0.04, 0.28] |
+| **all** | 53 | 0.25 [0.13, 0.38] | 0.36 [0.25, 0.49] | 0.42 [0.28, 0.55] | 0.53 [0.40, 0.66] | 0.72 [0.58, 0.83] | 0.29 [0.18, 0.40] |
+
+Command: `eval_retrieval.py --runs v2_results/runs_test/default/bm25_test_k1-1.2_b-0.75.parquet --passages ../data/passages_v2.parquet --queries ../data/queries_v2.csv --split test --output v2_results/results/test_default/retrieval_test.csv`
