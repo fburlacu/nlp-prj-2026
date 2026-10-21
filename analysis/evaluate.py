@@ -114,6 +114,7 @@ def generator_block(pairs):
 
 def score_split(queries, verdicts, run):
     strict_pairs, lenient_pairs, proxy_pairs = [], [], []
+    strict_entity, lenient_entity, proxy_entity = [], [], []
     top_types = defaultdict(int)
     gen_pairs = defaultdict(list)
     for query in queries:
@@ -124,12 +125,22 @@ def score_split(queries, verdicts, run):
         strict = pipe(query.get("gold_links"))
         lenient = pipe(query.get("gold_links_lenient"))
         docs = pipe(query.get("gold_doc_keys"))
+        entity = (query.get("entity_bin") or "").strip()
         if strict:
-            strict_pairs.append((query["overlap_bin"] or "none", gold_ranks(passages, strict, set())))
+            ranks = gold_ranks(passages, strict, set())
+            strict_pairs.append((query["overlap_bin"] or "none", ranks))
+            if entity:
+                strict_entity.append((entity, ranks))
         if lenient:
-            lenient_pairs.append((query["overlap_bin"] or "none", gold_ranks(passages, lenient, set())))
+            ranks = gold_ranks(passages, lenient, set())
+            lenient_pairs.append((query["overlap_bin"] or "none", ranks))
+            if entity:
+                lenient_entity.append((entity, ranks))
         if docs:
-            proxy_pairs.append((query["set"], gold_ranks(passages, set(), docs)))
+            ranks = gold_ranks(passages, set(), docs)
+            proxy_pairs.append((query["set"], ranks))
+            if entity:
+                proxy_entity.append((entity, ranks))
         verdict = verdicts.get(qid)
         if verdict:
             gen_pairs[query["set"]].append((query["label"], verdict["verdict"], verdict))
@@ -139,13 +150,16 @@ def score_split(queries, verdicts, run):
             "strict_eeas_disproof": {
                 "all": retrieval_block([ranks for _, ranks in strict_pairs]),
                 "by_overlap_bin": group_retrieval(strict_pairs),
+                "by_entity_bin": group_retrieval(strict_entity),
             },
             "lenient_eeas_disproof": {
                 "all": retrieval_block([ranks for _, ranks in lenient_pairs]),
                 "by_overlap_bin": group_retrieval(lenient_pairs),
+                "by_entity_bin": group_retrieval(lenient_entity),
             },
             "proxy_article_gold": {
                 "all": retrieval_block([ranks for _, ranks in proxy_pairs]),
+                "by_entity_bin": group_retrieval(proxy_entity),
             },
             "top1_doc_type": dict(top_types),
         },

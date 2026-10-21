@@ -1,0 +1,10 @@
+{
+  "mode": "rag",
+  "params": {
+    "k": 5
+  },
+  "inputs": {
+    "run": "C:\\Users\\Valerii Fomenko\\Documents\\UT\\RoboticsMaster\\NLP\\Project\\nlp-prj-2026\\generator\\dense-v2-results\\results\\dense_v2.parquet"
+  },
+  "model": "meta-llama/Llama-3.1-8B-Instruct"
+}
