@@ -155,8 +155,8 @@ def score_split(queries, verdicts, run):
 
 def main():
     ap = argparse.ArgumentParser(description="Score retrieval and generator outputs")
-    ap.add_argument("--retriever", default="dense")
-    ap.add_argument("--queries", default=str(ROOT / "data" / "queries.csv"))
+    ap.add_argument("--retriever", default="dense_v2")
+    ap.add_argument("--queries", default=str(ROOT / "data" / "queries_v2.csv"))
     ap.add_argument("--verdicts", default=None)
     ap.add_argument("--run", default=None)
     ap.add_argument("--split", choices=["dev", "test"], default=None,

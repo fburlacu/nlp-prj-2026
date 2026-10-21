@@ -3,7 +3,12 @@
 Encodes raw passage and query text. Do not run preprocessing.tokenize on either
 side: that stemmer is only for BM25.
 
-The run file is one JSON object per query. generator/claim_check.py reads it.
+The v2 table (data/passages_v2.parquet) is one disproof per case plus the
+already-chunked article passages. Disproofs are chunked here, and every chunk
+keeps case_links so a hit is still the gold case. A query searches only
+passages of its own set (main disproofs, or article chunks).
+
+The run file is one JSON object per query. generator/generator.py reads it.
 A later sparse or hybrid retriever should write the same shape.
 
 Usage (from the repo root):
@@ -12,6 +17,7 @@ Usage (from the repo root):
 """
 import argparse
 import json
+import re
 from pathlib import Path
 
 import numpy as np
@@ -80,9 +86,75 @@ def encode(model, texts, batch_size, prompt=""):
     return emb / np.clip(norms, 1e-12, None)
 
 
+_SENT = re.compile(r"(?<=[.!?…])[\"'”’)]*\s+(?=[\"'“‘(]?[A-Z0-9])")
+
+
+def chunk_words(text, chunk_words=150, max_chunk_words=220, min_chunk_words=30):
+    """Same sentence chunks as data/build_index.py. A short tail is merged back."""
+    sents = []
+    for para in re.split(r"\n\s*\n|\n", text or ""):
+        for sentence in _SENT.split(para.strip()):
+            words = sentence.split()
+            while len(words) > max_chunk_words:
+                sents.append(words[:chunk_words])
+                words = words[chunk_words:]
+            if words:
+                sents.append(words)
+    chunks, cur = [], []
+    for words in sents:
+        if cur and len(cur) + len(words) > chunk_words and len(cur) >= min_chunk_words:
+            chunks.append(cur)
+            cur = []
+        cur = cur + words
+        if len(cur) >= max_chunk_words:
+            chunks.append(cur[:max_chunk_words])
+            cur = cur[max_chunk_words:]
+    if cur:
+        if chunks and len(cur) < min_chunk_words:
+            chunks[-1] = chunks[-1] + cur
+        else:
+            chunks.append(cur)
+    return [" ".join(chunk) for chunk in chunks]
+
+
+def normalize_passages(passages):
+    """v2 columns become the names the run file and the scorer already use.
+
+    Disproofs are one row per case in passages_v2.parquet. Chunk them and keep
+    case_links on every piece. Article rows are already chunks.
+    """
+    frame = passages.copy()
+    version = "v2" if "source" in frame.columns else "v1"
+    if version == "v2":
+        frame = frame.rename(columns={"source": "doc_type", "case_id": "case_links", "doc_id": "doc_key"})
+        frame["doc_type"] = frame["doc_type"].replace({"leite_article": "article"})
+    if "set" not in frame.columns:
+        frame["set"] = ""
+    for column in ("case_links", "doc_key", "set"):
+        frame[column] = frame[column].fillna("").astype(str).replace({"None": "", "nan": ""})
+    if version != "v2":
+        return frame, version
+    rows = []
+    for record in frame.to_dict("records"):
+        if record["doc_type"] != "eeas_disproof":
+            rows.append(record)
+            continue
+        parts = chunk_words(record["text"]) or [record["text"]]
+        if len(parts) == 1:
+            record["text"] = parts[0]
+            rows.append(record)
+            continue
+        for i, part in enumerate(parts):
+            piece = dict(record)
+            piece["passage_id"] = f"{record['case_links']}#disproof-{i}"
+            piece["text"] = part
+            rows.append(piece)
+    return pd.DataFrame(rows), version
+
+
 def build_index(passages_path, index_dir, model_name, batch_size, device, query_prompt):
-    passages = read_table(passages_path)
-    keep = ["passage_id", "doc_type", "text", "case_links", "doc_key"]
+    passages, version = normalize_passages(read_table(passages_path))
+    keep = ["passage_id", "doc_type", "text", "case_links", "doc_key", "set"]
     missing = [c for c in keep if c not in passages.columns]
     if missing:
         raise SystemExit(f"{passages_path} is missing columns: {', '.join(missing)}")
@@ -106,6 +178,8 @@ def build_index(passages_path, index_dir, model_name, batch_size, device, query_
         "meta": meta_path.name,
         "n_passages": int(len(meta)),
         "dim": int(embeddings.shape[1]),
+        "passages": str(passages_path),
+        "version": version,
     }
     (index_dir / "config.json").write_text(json.dumps(config, indent=2), encoding="utf-8")
     print(meta.groupby("doc_type").size().to_string())
@@ -169,6 +243,15 @@ def search(queries_path, index_dir, output, k, batch_size, device, split, limit,
     queries = pd.read_csv(queries_path, dtype=str, keep_default_na=False)
     if split:
         queries = queries[queries["split"] == split]
+    passage_sets = set(meta["set"].astype(str)) - {""} if "set" in meta.columns else set()
+    if passage_sets and "set" in queries.columns:
+        # Same scope as sparse_bm25/llm/detect.py: main and article. The extra
+        # fact set has no passages in passages_v2.parquet and is not scored.
+        kept = queries["set"].isin(passage_sets)
+        skipped = sorted(set(queries.loc[~kept, "set"]))
+        if skipped:
+            print(f"Skipping {int((~kept).sum())} queries with no passages ({', '.join(skipped)})")
+        queries = queries[kept]
     if limit:
         queries = queries.head(limit)
     queries = queries[queries["text"].str.len() > 0].reset_index(drop=True)
@@ -192,11 +275,15 @@ def search(queries_path, index_dir, output, k, batch_size, device, split, limit,
         for start in range(0, len(queries), batch_size):
             stop = min(start + batch_size, len(queries))
             sims = q_emb[start:stop] @ embeddings.T
+            block = queries.iloc[start:stop]
             for local, ban in enumerate(banned[start:stop]):
                 if len(ban):
                     sims[local, ban] = -np.inf
+            if "set" in meta.columns and "set" in block.columns and meta["set"].astype(str).str.len().any():
+                sets = meta["set"].astype(str).to_numpy()
+                for local, query_set in enumerate(block["set"].astype(str)):
+                    sims[local, sets != query_set] = -np.inf
             chosen = topk_indices(sims, k)
-            block = queries.iloc[start:stop]
             for local, (_, query) in enumerate(block.iterrows()):
                 passages = []
                 for col in chosen[local]:
@@ -228,8 +315,8 @@ def main():
     sub = ap.add_subparsers(dest="cmd", required=True)
 
     idx = sub.add_parser("index", help="embed passages.parquet")
-    idx.add_argument("--passages", default=str(ROOT / "data" / "passages.parquet"))
-    idx.add_argument("--index-dir", default=str(ROOT / "retrieval" / "indexes" / "dense"))
+    idx.add_argument("--passages", default=str(ROOT / "data" / "passages_v2.parquet"))
+    idx.add_argument("--index-dir", default=str(ROOT / "retrieval" / "indexes" / "dense_v2"))
     idx.add_argument("--model", default="BAAI/bge-small-en-v1.5")
     idx.add_argument("--batch-size", type=int, default=64)
     idx.add_argument("--device", default=None)
@@ -237,9 +324,9 @@ def main():
                      help="prepended to queries only; default is the BGE instruction for BGE models")
 
     sea = sub.add_parser("search", help="embed queries.csv and write a run")
-    sea.add_argument("--queries", default=str(ROOT / "data" / "queries.csv"))
-    sea.add_argument("--index-dir", default=str(ROOT / "retrieval" / "indexes" / "dense"))
-    sea.add_argument("--output", default=str(ROOT / "retrieval" / "runs" / "dense.jsonl"))
+    sea.add_argument("--queries", default=str(ROOT / "data" / "queries_v2.csv"))
+    sea.add_argument("--index-dir", default=str(ROOT / "retrieval" / "indexes" / "dense_v2"))
+    sea.add_argument("--output", default=str(ROOT / "retrieval" / "runs" / "dense_v2.jsonl"))
     sea.add_argument("--k", type=int, default=10)
     sea.add_argument("--batch-size", type=int, default=64)
     sea.add_argument("--device", default=None)

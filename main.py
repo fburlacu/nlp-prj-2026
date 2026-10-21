@@ -27,11 +27,15 @@ def not_ready(name, detail):
 def run_dense(args, run_path):
     from retrieval.dense import build_index, query_prompt_for, search
 
-    index_dir = ROOT / "retrieval" / "indexes" / "dense"
+    passages = ROOT / "data" / "passages_v2.parquet"
+    queries = ROOT / "data" / "queries_v2.csv"
+    if not passages.exists() or not queries.exists():
+        raise SystemExit(f"v2 data missing: {passages.name} and {queries.name} must both be in data/")
+    index_dir = ROOT / "retrieval" / "indexes" / "dense_v2"
     model_name = "BAAI/bge-small-en-v1.5"
     if args.reindex or not (index_dir / "config.json").exists():
         build_index(
-            ROOT / "data" / "passages.parquet",
+            passages,
             index_dir,
             model_name,
             batch_size=64,
@@ -39,7 +43,7 @@ def run_dense(args, run_path):
             query_prompt=query_prompt_for(model_name),
         )
     search(
-        ROOT / "data" / "queries.csv",
+        queries,
         index_dir,
         run_path,
         k=args.k,
@@ -86,7 +90,8 @@ def main():
     if args.reranker != "none":
         not_ready(f"reranker {args.reranker}", "Call it on the run file before the generator.")
 
-    run_path = ROOT / "retrieval" / "runs" / f"{args.retriever}.jsonl"
+    run_name = "dense_v2" if args.retriever == "dense" else args.retriever
+    run_path = ROOT / "retrieval" / "runs" / f"{run_name}.jsonl"
     print(f"Retriever: {args.retriever}")
     RUNNERS[args.retriever](args, run_path)
     if args.retrieve_only:
@@ -102,8 +107,8 @@ def main():
         generate_kwargs["model"] = args.model
     generate(
         run_path,
-        ROOT / "generator" / f"verdicts_{args.retriever}.csv",
-        ROOT / "generator" / f"verdict_cache_{args.retriever}.jsonl",
+        ROOT / "generator" / f"verdicts_{run_name}.csv",
+        ROOT / "generator" / f"verdict_cache_{run_name}.jsonl",
         **generate_kwargs,
     )
 
