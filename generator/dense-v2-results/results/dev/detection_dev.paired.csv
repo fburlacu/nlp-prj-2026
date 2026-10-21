@@ -1,0 +1,19 @@
+preds,set,split,group,metric,n,mean,ci_lo,ci_hi
+bm25_k5 - noretrieval,main,dev,all,accuracy,90,0.0444,-0.1447,0.2333
+bm25_k5 - noretrieval,main,dev,all,precision_disinformation,90,0.125,-0.2255,0.4667
+bm25_k5 - noretrieval,main,dev,all,recall_disinformation,90,0.9333,0.8542,1.0
+bm25_k5 - noretrieval,main,dev,all,f1_disinformation,90,0.5535,0.4006,0.6834
+bm25_k5 - noretrieval,main,dev,all,precision_inconclusive,90,-0.5067,-0.6185,-0.3974
+bm25_k5 - noretrieval,main,dev,all,recall_inconclusive,90,-0.8444,-0.9512,-0.7391
+bm25_k5 - noretrieval,main,dev,all,f1_inconclusive,90,-0.6333,-0.7302,-0.5263
+bm25_k5 - noretrieval,main,dev,all,macro_f1,90,-0.0399,-0.1523,0.0634
+bm25_k5 - noretrieval,main,dev,all,off_label_rate,90,-0.0778,-0.1333,-0.0222
+dense_k5 - noretrieval,main,dev,all,accuracy,90,0.0222,-0.1667,0.2111
+dense_k5 - noretrieval,main,dev,all,precision_disinformation,90,0.1118,-0.2278,0.4512
+dense_k5 - noretrieval,main,dev,all,recall_disinformation,90,0.7556,0.6222,0.8776
+dense_k5 - noretrieval,main,dev,all,f1_disinformation,90,0.4984,0.3535,0.643
+dense_k5 - noretrieval,main,dev,all,precision_inconclusive,90,0.0388,-0.289,0.3248
+dense_k5 - noretrieval,main,dev,all,recall_inconclusive,90,-0.7111,-0.8438,-0.575
+dense_k5 - noretrieval,main,dev,all,f1_inconclusive,90,-0.419,-0.5901,-0.2565
+dense_k5 - noretrieval,main,dev,all,macro_f1,90,0.0397,-0.0945,0.1765
+dense_k5 - noretrieval,main,dev,all,off_label_rate,90,-0.0444,-0.1,0.0114

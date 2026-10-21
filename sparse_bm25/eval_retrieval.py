@@ -175,7 +175,7 @@ out.with_suffix(".results.json").write_text(json.dumps({
                "levels": {k: {"gold": c, "types": sorted(t), "match": m} for k, (c, t, m) in LEVELS.items()}},
     "summary": nest(summary),
     "paired_vs_first_run": nest(paired) if len(paired) else {},
-}, indent=2))
+}, indent=2), encoding="utf-8")
 
 
 
@@ -220,7 +220,7 @@ if len(paired):
     md += [f"## Paired differences (run − `{names[0]}`)", "",
            "\\* = 95% CI excludes 0.", ""] + md_tables(paired, signed=True)
 md += [f"Command: `{' '.join(sys.argv)}`", ""]
-out.with_suffix(".md").write_text("\n".join(md))
+out.with_suffix(".md").write_text("\n".join(md), encoding="utf-8")
 
 view = summary.assign(o=summary["bin"].map(BIN_ORDER)).sort_values(["run", "level", "set", "split", "o"])
 view = view.pivot_table(index=["run", "level", "set", "split", "bin", "n"], columns="metric", values="mean",
