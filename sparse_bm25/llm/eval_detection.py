@@ -1,19 +1,20 @@
 """Detection evaluation (RQ2): scores prediction files from detect.py, so all retrievers (and the
 no-retrieval baseline) are compared on the same queries with the same metrics.
 
-Usage:
-  python eval_detection.py --preds preds/noretrieval_dev.csv preds/bm25_dev_k5.csv [...] \
-                           --output results/detection_dev.csv \
-                           [--retrieval ../sparse_bm25/results/dev/retrieval_dev.per_query.csv]
+Usage (from sparse_bm25/llm/; see run.md):
+  python eval_detection.py --preds v2_results/preds/dev/noretrieval.csv v2_results/preds/dev/bm25_k5.csv [...] \
+                           --output v2_results/results/dev/detection_dev.csv \
+                           [--retrieval ../v2_results/results/tune_dev.per_query.csv]
 The first prediction file is the baseline for paired differences.
 Per set (label space):  main     disinformation vs inconclusive (abstention when the case is held out)
                         article  disinformation vs fact (real headlines)
 Predictions are 3-way; a prediction outside the set's label space (e.g. 'fact' on the main set) is wrong
 and reported as the off-label rate.
 Metrics: accuracy, macro-F1 (over the set's two classes), precision / recall / F1 per class, 95%
-bootstrap CIs. Disinformation recall is also broken down by overlap bin, entity bin and, with
---retrieval, by whether gold evidence was among the k passages the LLM saw (case level for the main
-set, proxy level for the article set): this shows whether retrieval gains translate into detection.
+bootstrap CIs. Disinformation recall is also broken down by overlap bin, disproof length bin (v2),
+entity bin and, with --retrieval, by whether gold evidence was among the k passages the LLM saw (main set:
+case level in v1, lenient level in v2, which has no claim passages; article set: proxy level): this shows
+whether retrieval gains translate into detection. Only the sets present in the prediction files are scored.
 Cost per file: prompt tokens, LLM seconds per query, GPU memory (detect.py config) and retrieval
 latency (run config).
 Writes <output> (summary, long format), <output>.md (report), <output>.per_query.csv,
@@ -29,22 +30,23 @@ import pandas as pd
 
 N_BOOT, SEED = 1000, 0
 LABELS = {"main": ["disinformation", "inconclusive"], "article": ["disinformation", "fact"]}
-BIN_COLS = ["overlap_bin", "entity_bin"]
-BIN_LABEL = {"low": "overlap: low", "mid": "overlap: mid", "high": "overlap: high", "entity": "entity-driven",
+BIN_LABEL = {"low": "overlap: low", "mid": "overlap: mid", "high": "overlap: high",
+             "short": "length: short", "medium": "length: medium", "long": "length: long", "entity": "entity-driven",
              "formulation": "formulation-driven", "hit": "gold evidence in top-k", "miss": "gold evidence not in top-k"}
 GROUP_ORDER = list(BIN_LABEL)
-HIT_LEVEL = {"main": "case", "article": "proxy"}
+HIT_LEVEL = {"main": ["case", "lenient"], "article": ["proxy"]}  # first level present in --retrieval is used
 
 HERE = Path(__file__).resolve().parent
 ap = argparse.ArgumentParser()
 ap.add_argument("--preds", nargs="+", required=True, help="prediction files; the first is the baseline")
-ap.add_argument("--queries", default=str(HERE.parent.parent / "data" / "queries.csv"))
+ap.add_argument("--queries", default=str(HERE.parent.parent / "data" / "queries_v2.csv"))
 ap.add_argument("--retrieval", help="optional per_query.csv from eval_retrieval.py, for the hit/miss breakdown")
 ap.add_argument("--output", required=True, help="summary file (.csv)")
 a = ap.parse_args()
 
 rng = np.random.default_rng(SEED)
 queries = pd.read_csv(a.queries, dtype=str, keep_default_na=False)
+BIN_COLS = [c for c in ["overlap_bin", "len_bin", "entity_bin"] if c in queries.columns]  # len_bin: v2 only
 retr = pd.read_csv(a.retrieval, dtype={"query_id": str}) if a.retrieval else None
 
 
@@ -91,7 +93,10 @@ def load(path):
         r = retr[retr["run"] == run_name]
         if r.empty:
             print(f"WARNING {path.name}: run {run_name} not in {a.retrieval}; no hit/miss breakdown")
-        for s, lvl in HIT_LEVEL.items():
+        for s, levels in HIT_LEVEL.items():
+            lvl = next((l for l in levels if (r["level"] == l).any()), None)
+            if lvl is None:
+                continue
             fr = r[r["level"] == lvl].set_index("query_id")["first_rank"]
             sel = (p["set"] == s) & p["query_id"].isin(fr.index)
             p.loc[sel, "hit"] = np.where(p.loc[sel, "query_id"].map(fr) <= k, "hit", "miss")

@@ -1,0 +1,43 @@
+{
+  "retriever": "bm25",
+  "created_utc": "2026-10-21T10:51:03+00:00",
+  "command": "/Users/fel/Documents/uni/nlp/project/sparse_bm25/retrieve.py --passages ../data/passages_v2.parquet --queries ../data/queries_v2.csv --split dev --set main --k1 1.2 --b 0.9 --output v2_results/runs_tune/bm25_dev_k1-1.2_b-0.9.parquet",
+  "params": {
+    "k1": 1.2,
+    "b": 0.9,
+    "k": 100,
+    "idf": "lucene: log(1 + (N - df + 0.5) / (df + 0.5))",
+    "tokenizer": "data.preprocessing.tokenize (lowercase, English stopwords, Snowball)"
+  },
+  "filters": {
+    "split": "dev",
+    "set": "main"
+  },
+  "inputs": {
+    "passages": "/Users/fel/Documents/uni/nlp/project/data/passages_v2.parquet",
+    "passages_sha256": "c85690eb2b43a8fd06e8fdd00a524b66f722e63dcc7385f79f1aa58d5fe963cc",
+    "queries": "/Users/fel/Documents/uni/nlp/project/data/queries_v2.csv",
+    "queries_sha256": "0e77ff3bc0b649511607607908112fbbea8b01a4fbee9589df96976e2f67a88a"
+  },
+  "counts": {
+    "n_passages": 38595,
+    "n_queries": 90,
+    "n_rows": 9000,
+    "passages_by_set": {
+      "main": 13447
+    },
+    "vocabulary": 19803,
+    "nonzeros": 1017633,
+    "queries_by_set_label_split": {
+      "main/disinformation/dev": 45,
+      "main/inconclusive/dev": 45
+    }
+  },
+  "timing": {
+    "index_build_s": 1.32,
+    "index_weights_mb": 7.8,
+    "query_ms_p50": 0.514,
+    "query_ms_p95": 0.686,
+    "query_ms_mean": 0.549
+  }
+}

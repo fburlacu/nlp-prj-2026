@@ -2,7 +2,9 @@
 
 Usage:
   python tune.py [--passages ... --queries ... --runs_dir runs_tune --output results/tune_dev.csv]
-The grid, baseline and selection metric are set in the constants below.
+  v2:  python tune.py --passages ../data/passages_v2.parquet --queries ../data/queries_v2.csv --set main \
+                      --select lenient:mrr@10 --runs_dir v2_results/runs_tune --output v2_results/results/tune_dev.csv
+The grid and baseline are set in the constants below; the selection metric with --select.
 Steps
   1. retrieve.py --split dev for every (k1, b)  -> <runs_dir>/bm25_dev_k1-<k1>_b-<b>.parquet
   2. eval_retrieval.py on all runs, baseline first -> <output> (+ .md, .paired.csv, ...)
@@ -22,7 +24,6 @@ import pandas as pd
 K1_GRID = [0.6, 0.9, 1.2, 1.5, 2.0]
 B_GRID = [0.3, 0.5, 0.75, 0.9]
 BASELINE = (1.2, 0.75)     # standard defaults; replaced only by a significantly better config
-SELECT = "case:mrr@10"     # level:metric that ranks the configurations
 SKIP_EXISTING = False      # True: reuse run files already in runs_dir (e.g. after extending the grid)
 
 HERE = Path(__file__).resolve().parent
@@ -31,16 +32,20 @@ ap.add_argument("--passages", default=str(HERE.parent / "data" / "passages.parqu
 ap.add_argument("--queries", default=str(HERE.parent / "data" / "queries.csv"))
 ap.add_argument("--runs_dir", default=str(HERE / "runs_tune"), help="where the dev run files are written")
 ap.add_argument("--output", default=str(HERE / "results" / "tune_dev.csv"), help="evaluation summary (.csv)")
+ap.add_argument("--set", dest="qset", choices=["main", "article"], help="only queries from this set (v2: main)")
+ap.add_argument("--select", default="case:mrr@10",
+                help="level:metric that ranks the configurations (v1: case:mrr@10; v2 has no case level)")
 a = ap.parse_args()
 
+SELECT = a.select
 sel_level, sel_metric = SELECT.split(":")
 # columns shown in the ranking besides the selection metric
-SHOW = [("case", "mrr@10"), ("case", "hit@10"), ("strict", "mrr@10"), ("strict", "hit@10"), ("strict", "hit@100")]
+SHOW = [(sel_level, "mrr@10"), (sel_level, "hit@10"), ("strict", "mrr@10"), ("strict", "hit@10"), ("strict", "hit@100")]
 
 name = lambda k1, b: f"bm25_dev_k1-{k1:g}_b-{b:g}"
 base = BASELINE
 configs = [base] + [c for c in itertools.product(K1_GRID, B_GRID) if c != base]
-data = ["--passages", a.passages, "--queries", a.queries, "--split", "dev"]
+data = ["--passages", a.passages, "--queries", a.queries, "--split", "dev"] + (["--set", a.qset] if a.qset else [])
 
 # 1. one dev run per configuration
 paths = []
@@ -64,7 +69,7 @@ out = Path(a.output)
 main = lambda df: df[(df["set"] == "main") & (df["bin"] == "all")].set_index(["run", "level", "metric"])
 summary = main(pd.read_csv(out))
 paired = main(pd.read_csv(out.with_suffix(".paired.csv")))
-cols = [(sel_level, sel_metric)] + [c for c in SHOW if c != (sel_level, sel_metric)]
+cols = list(dict.fromkeys([(sel_level, sel_metric)] + SHOW))
 
 rows = []
 for k1, b in configs:

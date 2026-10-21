@@ -1,48 +1,58 @@
-# Running the LLM detection step (RQ2)
+# Running the LLM detection step (RQ2), v2
 
-Llama 3.1 8B Instruct judges each claim as `false` (disinformation), `true` (fact) or `unknown` (inconclusive), either from the claim alone (no-retrieval baseline) or from the claim plus the top-k passages of a retrieval run (RAG). 
+Llama 3.1 8B Instruct judges each claim as `false` (disinformation), `true` (fact) or `unknown` (inconclusive), either from the claim alone (no-retrieval baseline) or from the claim plus the top-k passages of a retrieval run (RAG).
 
 | Script | Does |
 |---|---|
 | `detect.py` | Writes predictions for one configuration (one retrieval run + k, or no retrieval) |
 | `eval_detection.py` | Scores one or more prediction files on the same queries and compares them with the first one |
 
-All commands below are run from `sparse_bm25/llm/`.
+All commands below are run from `sparse_bm25/llm/`. v1 predictions and results are in `v1_results/`.
+
+**v2 setup.**
+- **Queries:** `data/queries_v2.csv`, **main set only**: EEAS disinformation titles and held-out (inconclusive) titles. Dev has 90 queries, test 600.
+- **Evidence:** EEAS disproofs from `data/passages_v2.parquet` (`set = main`), one passage per disproof, not chunked.
+- **Retrieval runs:** made with BM25, k1 = 1.2, b = 0.75. These were the defaults, kept after dev tuning (`../v2_results/results/tune_dev.ranking.md`).
+- **Script defaults:** `detect.py` and `eval_detection.py` already default to the v2 files and to `--sets main`.
+
+**Passage length.** Disproofs go into the prompt whole: `--max_passage_words` defaults to 800, and the longest disproof is 766 words. With k = 10, a prompt can reach about 10k tokens. If the GPU runs out of memory, lower `--batch_size` (default 8) rather than cutting the evidence.
 
 ## Dev: choose k
 
-Every prediction file comes from one `detect.py` call. Run the no-retrieval baseline and a range of k on dev, then score them together; the first file in `--preds` is the baseline for the paired differences.
+Every prediction file comes from one `detect.py` call. Run the no-retrieval baseline and a range of k on dev, then score them together. The first file in `--preds` is the baseline for the paired differences.
 
 ```bash
-RUN=../runs_dev/bm25_dev_k1-1.2_b-0.75.parquet
-python detect.py --split dev --output preds/dev/noretrieval.csv
+RUN=../v2_results/runs_tune/bm25_dev_k1-1.2_b-0.75.parquet
+python detect.py --split dev --output v2_results/preds/dev/noretrieval.csv
 for k in 1 3 5 10; do
-  python detect.py --run $RUN --split dev --k $k --output preds/dev/bm25_k$k.csv
+  python detect.py --run $RUN --split dev --k $k --output v2_results/preds/dev/bm25_k$k.csv
 done
-python eval_detection.py --preds preds/dev/noretrieval.csv preds/dev/bm25_k{1,3,5,10}.csv \
-  --retrieval ../results/dev/retrieval_dev.per_query.csv --output results/dev/detection_dev.csv
+python eval_detection.py --preds v2_results/preds/dev/noretrieval.csv v2_results/preds/dev/bm25_k{1,3,5,10}.csv \
+  --retrieval ../v2_results/results/tune_dev.per_query.csv --output v2_results/results/dev/detection_dev.csv
 ```
 
-About 10 minutes in total once the model is loaded (192 dev queries; 0.04 s per query without retrieval, 0.08–0.5 s with k = 1–10).
+`tune_dev.per_query.csv` holds all 20 tuning runs. `eval_detection.py` takes the rows of the run named in each prediction file's config (`bm25_dev_k1-1.2_b-0.75`).
 
-Fix the selection rule before reading the results. We used: **the k with the highest mean macro-F1 over the main and article sets**, which gave k = 5. Any prompt change must also be decided on dev, before test is run.
+Fix the selection rule before reading the results. Proposed: **the k with the highest macro-F1 on main/dev**. In v1 the rule averaged over the main and article sets, but v2 has only the main set. Any prompt change must also be decided on dev, before test is run.
 
-##  Test: run once
+## Test: run once
 
-Use the k chosen on dev. Retrieval runs: `default` is the primary configuration and `sensitivity` the robustness check (see `../BM25_DESIGN.md` §1.4).
+Use the k chosen on dev. Retrieval runs: `default` is the primary configuration, and `sensitivity` (k1 = 1.5, b = 0.5, best on dev but not significantly better) is the robustness check.
 
 ```bash
-K=5
-python detect.py --split test --output preds/test/noretrieval.csv
-python detect.py --run ../runs_test/default/bm25_test_k1-1.2_b-0.75.parquet --split test --k $K \
-  --output preds/test/bm25_k$K.csv
-python detect.py --run ../runs_test/sensitivity/bm25_test_k1-1.5_b-0.3.parquet --split test --k $K \
-  --output preds/test/bm25_sens_k$K.csv
-python eval_detection.py --preds preds/test/noretrieval.csv preds/test/bm25_k$K.csv preds/test/bm25_sens_k$K.csv \
-  --retrieval ../results/test_default/retrieval_test.per_query.csv --output results/test/detection_test.csv
+K=5   # the k chosen on dev
+python detect.py --split test --output v2_results/preds/test/noretrieval.csv
+python detect.py --run ../v2_results/runs_test/default/bm25_test_k1-1.2_b-0.75.parquet --split test --k $K \
+  --output v2_results/preds/test/bm25_k$K.csv
+python detect.py --run ../v2_results/runs_test/sensitivity/bm25_test_k1-1.5_b-0.5.parquet --split test --k $K \
+  --output v2_results/preds/test/bm25_sens_k$K.csv
+python eval_detection.py --preds v2_results/preds/test/noretrieval.csv v2_results/preds/test/bm25_k$K.csv \
+  v2_results/preds/test/bm25_sens_k$K.csv \
+  --retrieval ../v2_results/results/test_compare/retrieval_test.per_query.csv \
+  --output v2_results/results/test/detection_test.csv
 ```
 
-About 1–5 minutes per run (1,104 test queries). `--retrieval` must be the per-query retrieval file of the run in the second position; it adds the "gold evidence in / not in top-k" breakdown for that run only.
+`test_compare/retrieval_test.per_query.csv` contains both test runs, so both RAG files get the "gold evidence in / not in top-k" breakdown.
 
 For a quick smoke test of a new configuration, add `--limit 20` and write to a scratch output file.
 
@@ -51,16 +61,18 @@ For a quick smoke test of a new configuration, add `--limit 20` and write to a s
 **`detect.py`** writes:
 
 - `<output>.csv`: one row per query: `query_id, set, split, label, pred, p_disinformation, p_fact, p_inconclusive, passage_ids, n_prompt_tokens`. The three probabilities are the model's next-token probability mass for the three answer words, renormalised; `pred` is the largest. `passage_ids` (separated by `|`) are the passages the model saw.
-- `<output>.config.json`: model, dtype, device, full prompt, k, input file hashes, timings (`model_load_s`, `llm_s_per_query`, `gpu_peak_mem_gb`).
+- `<output>.config.json`: model, dtype, device, full prompt, k, `max_passage_words`, batch size, input files with hashes (run, passages, queries), timings (`model_load_s`, `llm_s_per_query`, `gpu_peak_mem_gb`).
+
+The run is resumable: queries already in `<output>.csv` are skipped. Change the output name whenever k, the run or the prompt changes.
 
 **`eval_detection.py`** writes `<output>.md` (report: read this first), `.csv` (all metrics with 95% bootstrap CIs, long format, for plots), `.paired.csv` (differences to the first file), `.per_query.csv` (all prediction files with bins) and `.results.json` (everything in one file).
-
-The two query sets are scored separately:
 
 | Set | Classes | Correct behaviour |
 |---|---|---|
 | main | disinformation vs inconclusive | For inconclusive queries the case was held out of the index, so the model should answer `unknown` |
-| article | disinformation vs fact | Separate fake from real headlines |
 
-The main metric is macro-F1. A prediction outside the set's two classes counts as wrong and is reported as off-label.
-
+The main metric is macro-F1. A prediction outside the set's two classes (here `true`) counts as wrong and is reported as off-label. Disinformation recall is also broken down by:
+- overlap bin;
+- disproof length bin;
+- entity bin;
+- with `--retrieval`, whether a gold disproof (own case or a near-duplicate, the lenient level) was among the k passages.

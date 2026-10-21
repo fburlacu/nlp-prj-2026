@@ -1,10 +1,13 @@
 """LLM verdicts (RQ2): Llama 3.1 8B Instruct judges each query, given the top-k passages of a run file
 (RAG) or no evidence at all (--run omitted: no-retrieval baseline).
 
-Usage (e.g. from a Jupyter cell with !python):
-  python detect.py --run ../sparse_bm25/runs_dev/bm25_dev_k1-1.2_b-0.75.parquet --split dev \
-                   --output preds/bm25_dev_k5.csv [--k 5 --limit 20]
-  python detect.py --split dev --output preds/noretrieval_dev.csv          # no-retrieval baseline
+Usage (from sparse_bm25/llm/; see run.md):
+  python detect.py --run ../v2_results/runs_tune/bm25_dev_k1-1.2_b-0.75.parquet --split dev \
+                   --output v2_results/preds/dev/bm25_k5.csv [--k 5 --limit 20]
+  python detect.py --split dev --output v2_results/preds/dev/noretrieval.csv   # no-retrieval baseline
+Defaults are the v2 files (data/passages_v2.parquet, data/queries_v2.csv) and the main set only, since v2
+retrieval runs on the main set only. v1: --passages ../../data/passages.parquet --queries ../../data/queries.csv
+--sets main article --max_passage_words 250.
 Writes
   <output>.csv          query_id, set, split, label, pred, p_disinformation, p_fact, p_inconclusive,
                         passage_ids, n_prompt_tokens
@@ -34,13 +37,11 @@ from huggingface_hub import try_to_load_from_cache
 from transformers import AutoTokenizer, AutoModelForCausalLM
 
 MODEL = "meta-llama/Llama-3.1-8B-Instruct"
-SETS = ["main", "article"]          # the extra fact set is not part of either benchmark
-BATCH_SIZE = 8
-MAX_PASSAGE_WORDS = 250             # claims can be longer than the 220-word chunk cap
 ANSWERS = {"false": "disinformation", "true": "fact", "unknown": "inconclusive"}
+# passage type (v1 doc_type / v2 source) -> label shown to the model
 TYPE_NAME = {"eeas_claim": "EUvsDisinfo database: documented disinformation claim",
              "eeas_disproof": "EUvsDisinfo database: analysts' refutation",
-             "article": "News article"}
+             "article": "News article", "leite_article": "News article"}
 
 SYSTEM = ("You are a fact-checking assistant. You judge whether a claim is disinformation, using only "
           "the evidence you are given. Answer with exactly one word: false, true or unknown.")
@@ -67,13 +68,20 @@ Answer with one word (false, true or unknown)."""
 HERE = Path(__file__).resolve().parent
 ap = argparse.ArgumentParser()
 ap.add_argument("--run", help="retrieval run file (.parquet); omit for the no-retrieval baseline")
-ap.add_argument("--passages", default=str(HERE.parent.parent / "data" / "passages.parquet"))
-ap.add_argument("--queries", default=str(HERE.parent.parent / "data" / "queries.csv"))
+ap.add_argument("--passages", default=str(HERE.parent.parent / "data" / "passages_v2.parquet"))
+ap.add_argument("--queries", default=str(HERE.parent.parent / "data" / "queries_v2.csv"))
+ap.add_argument("--sets", nargs="+", default=["main"], choices=["main", "article"],
+                help="query sets to judge (v2 retrieval covers main only; the extra fact set is in no benchmark)")
 ap.add_argument("--output", required=True, help="predictions file (.csv)")
 ap.add_argument("--split", choices=["dev", "test"], help="only queries from this split")
 ap.add_argument("--k", type=int, default=5, help="passages given to the LLM")
 ap.add_argument("--limit", type=int, help="only the first N queries (quick test)")
+ap.add_argument("--max_passage_words", type=int, default=800,
+                help="passages are cut after this many words; v2 disproofs are not chunked (max 766 words), "
+                     "so the default keeps them whole (v1: 250)")
+ap.add_argument("--batch_size", type=int, default=8, help="lower it if long prompts run out of GPU memory")
 a = ap.parse_args()
+SETS, BATCH_SIZE, MAX_PASSAGE_WORDS = a.sets, a.batch_size, a.max_passage_words
 
 split = lambda s: [x for x in str(s).split("|") if x and x != "nan"]
 
@@ -101,8 +109,13 @@ if a.run:
     evidence_ids = run.groupby("query_id")["passage_id"].apply(list).to_dict()
     missing = set(queries["query_id"]) - set(evidence_ids)
     if missing:
-        sys.exit(f"{len(missing)} queries are not in the run file (e.g. {sorted(missing)[:3]}); check --split")
-    passages = pd.read_parquet(a.passages, columns=["passage_id", "doc_type", "text"]).set_index("passage_id")
+        sys.exit(f"{len(missing)} queries are not in the run file (e.g. {sorted(missing)[:3]}); check --split/--sets")
+    passages = pd.read_parquet(a.passages)
+    passages = passages.rename(columns={"source": "doc_type"})  # v2 column name
+    passages = passages[["passage_id", "doc_type", "text"]].set_index("passage_id")
+    unknown = set(passages.loc[[p for ids in evidence_ids.values() for p in ids], "doc_type"]) - set(TYPE_NAME)
+    if unknown:
+        sys.exit(f"passage types without a label in TYPE_NAME: {sorted(unknown)}")
 
 
 def shorten(text):
@@ -206,6 +219,8 @@ config = {
     "prompt": {"system": SYSTEM, "user": RAG_PROMPT if a.run else NO_RAG_PROMPT, "passage_types": TYPE_NAME},
     "filters": {"split": a.split, "sets": SETS, "limit": a.limit},
     "inputs": {"run": str(Path(a.run).resolve()) if a.run else None, "run_sha256": sha256(a.run) if a.run else None,
+               "passages": str(Path(a.passages).resolve()) if a.run else None,
+               "passages_sha256": sha256(a.passages) if a.run else None,
                "queries": str(Path(a.queries).resolve()), "queries_sha256": sha256(a.queries)},
     "counts": {"n_predictions": len(preds), "pred_distribution": preds["pred"].value_counts().to_dict()},
     "timing_this_session": {"model_load_s": round(load_s, 1), "n_queries": len(rows_q),

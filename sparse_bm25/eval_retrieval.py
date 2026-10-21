@@ -10,9 +10,14 @@ Gold levels (a query is scored on a level only if it has gold for it):
   case     any eeas_disproof OR eeas_claim passage of those cases          (gold_links_lenient)
            (the query's own claim is already excluded at retrieval time)
   proxy    any chunk of a same-debunk trustworthy article                 (gold_doc_keys)
+A level is skipped if the index lacks one of its passage types. v2 (data/passages_v2.parquet) has no
+eeas_claim passages, so `case` is skipped; its columns source / case_id / doc_id are read as
+doc_type / case_links / doc_key. Main-set queries only retrieve set=main passages (disproofs) and article
+queries only set=article passages (article chunks), so strict/lenient apply to main and proxy to article.
 Metrics per query: rank of the first gold passage, hit@k, reciprocal rank (MRR@mrr_k).
-Groups: all queries, each overlap_bin (low/mid/high) and each entity_bin (entity/formulation; from
-data/add_entity_overlap.py, which must have been run on queries.csv).
+Groups: all queries, each overlap_bin (low/mid/high), each len_bin (disproof length tertile short/medium/long;
+queries_v2.csv only) and each entity_bin (entity/formulation; from data/add_entity_overlap.py, which must
+have been run on the queries file).
 Writes
   <output>                 summary: run, level, set, split, bin, metric, n, mean, ci_lo, ci_hi
   <output>.per_query.csv   one row per run x level x query (input for later significance tests)
@@ -35,6 +40,7 @@ ap.add_argument("--passages", default=str(HERE.parent / "data" / "passages.parqu
 ap.add_argument("--queries", default=str(HERE.parent / "data" / "queries.csv"))
 ap.add_argument("--output", required=True, help="summary file (.csv)")
 ap.add_argument("--split", choices=["dev", "test"], help="only queries from this split")
+ap.add_argument("--set", dest="qset", choices=["main", "article"], help="only queries from this set")
 ap.add_argument("--ks", type=int, nargs="+", default=[1, 5, 10, 20, 100])
 ap.add_argument("--mrr_k", type=int, default=10)
 ap.add_argument("--n_boot", type=int, default=1000)
@@ -51,15 +57,24 @@ LEVELS = {
     "proxy": ("gold_doc_keys", {"article"}, "doc_key"),
 }
 METRICS = [f"hit@{k}" for k in a.ks] + [f"mrr@{a.mrr_k}"]
-BIN_COLS = ["overlap_bin", "entity_bin"]  # entity_bin from data/add_entity_overlap.py
-BIN_ORDER = {"low": 0, "mid": 1, "high": 2, "entity": 3, "formulation": 4, "all": 5}
+BIN_ORDER = {"low": 0, "mid": 1, "high": 2, "short": 3, "medium": 4, "long": 5, "entity": 6, "formulation": 7,
+             "all": 8}
 
-passages = pd.read_parquet(a.passages, columns=["passage_id", "doc_type", "case_links", "doc_key"]).fillna("")
+passages = pd.read_parquet(a.passages)
+if "source" in passages:  # v2 index
+    passages = passages.rename(columns={"source": "doc_type", "case_id": "case_links", "doc_id": "doc_key"})
+    passages["doc_type"] = passages["doc_type"].replace({"leite_article": "article"})
+passages = passages[["passage_id", "doc_type", "case_links", "doc_key"]].fillna("")
 queries = pd.read_csv(a.queries, dtype=str, keep_default_na=False)
 if "entity_bin" not in queries.columns:
     sys.exit(f"{a.queries} has no entity_bin column: run data/add_entity_overlap.py first")
+BIN_COLS = [c for c in ["overlap_bin", "len_bin", "entity_bin"] if c in queries.columns]
 if a.split:
     queries = queries[queries["split"] == a.split]
+if a.qset:
+    queries = queries[queries["set"] == a.qset]
+present = set(passages["doc_type"])
+LEVELS = {lvl: v for lvl, v in LEVELS.items() if v[1] <= present}
 gold = {lvl: {q: g for q, g in zip(queries["query_id"], queries[col].map(split)) if g}
         for lvl, (col, _, _) in LEVELS.items()}
 
@@ -165,6 +180,7 @@ out.with_suffix(".results.json").write_text(json.dumps({
 
 
 BIN_LABEL = {"low": "overlap: low", "mid": "overlap: mid", "high": "overlap: high",
+             "short": "length: short", "medium": "length: medium", "long": "length: long",
              "entity": "entity-driven", "formulation": "formulation-driven", "all": "**all**"}
 
 
@@ -193,10 +209,12 @@ levels_doc = {"strict": "own disproof", "lenient": "own or near-duplicate dispro
 md = [f"# Retrieval evaluation", "",
       f"Runs: {', '.join(f'`{n}`' for n in names)} | split: {a.split or 'all'} | "
       f"cells: mean [95% bootstrap CI, {a.n_boot} resamples]", "",
-      "Gold levels: " + "; ".join(f"**{k}** = {v}" for k, v in levels_doc.items()), "",
-      "Rows: all queries, then by title–disproof word overlap (`overlap_bin`) and by entity type (`entity_bin`: "
+      "Gold levels: " + "; ".join(f"**{k}** = {v}" for k, v in levels_doc.items() if k in LEVELS), "",
+      "Rows: all queries, then by title–disproof word overlap (`overlap_bin`), "
+      + ("by disproof length tertile (`len_bin`), " if "len_bin" in BIN_COLS else "") +
+      "and by entity type (`entity_bin`: "
       "entity-driven = the query's specific named entities occur in the gold evidence; formulation-driven = "
-      "no specific entity, or the evidence does not repeat it). The two groupings overlap; each sums to all.", "",
+      "no specific entity, or the evidence does not repeat it). The groupings overlap; each sums to all.", "",
       "## Results", ""] + md_tables(summary)
 if len(paired):
     md += [f"## Paired differences (run − `{names[0]}`)", "",
