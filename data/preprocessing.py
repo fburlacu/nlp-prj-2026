@@ -55,6 +55,33 @@ def jaccard(a: set, b: set) -> float:
     return len(a & b) / len(a | b) if a and b else 0.0
 
 
+def norm_text(text: str) -> str:
+    """Lowercase, punctuation stripped, single spaces: 'Is it true?' -> 'is it true'."""
+    return " ".join(words(text))
+
+
+def quoted_titles(keys, titles, disproofs) -> dict:
+    """key -> set of OTHER keys whose disproof contains the key's title (normalised, whole words).
+    Candidate disproofs are those containing the title's rarest word, then checked as substrings."""
+    from collections import Counter, defaultdict
+    T = [norm_text(t) for t in titles]
+    D = [f" {norm_text(d)} " for d in disproofs]
+    df, inv = Counter(), defaultdict(list)
+    for j, d in enumerate(D):
+        for w in set(d.split()):
+            df[w] += 1
+            inv[w].append(j)
+    out = {}
+    for i, t in enumerate(T):
+        if not t:
+            continue
+        rare = min(t.split(), key=lambda w: df.get(w, 0))
+        hits = {keys[j] for j in inv.get(rare, []) if j != i and f" {t} " in D[j]}
+        if hits:
+            out[keys[i]] = hits
+    return out
+
+
 # ---------------- headline helpers (shared by query builder and LLM filter) ----------------
 _TITLE_SPLIT = re.compile(r"\s+[|\-–—:]\s+")
 _NON_CLAIM = re.compile(r"^(live|watch|video|photos?|in pictures|podcast|opinion|op-ed|analysis|explainer|"
