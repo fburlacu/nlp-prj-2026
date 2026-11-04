@@ -15,9 +15,13 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 QUERIES = ("title", "rewrite")
+RUN_QUERIES = (*QUERIES, "disproof")
 RETRIEVERS = ("bm25", "dense")
 FIRST_STAGE = (*RETRIEVERS, "late")
-OPTIONAL = ("title_late_none", "title_bm25_late_k200", "title_dense_late_k200")
+OPTIONAL = (
+    "title_late_none", "title_bm25_late_k200", "title_dense_late_k200",
+    "disproof_bm25_none", "disproof_dense_none",
+)
 RERANKERS = ("none", "cross", "late")
 ALIASES = {"sparse": "bm25", "cross-encoder": "cross", "late-interaction": "late"}
 
@@ -62,12 +66,14 @@ def run_cell(args):
     from pipeline.retrieve import load_queries, retrieve, search_strings
     from pipeline.store import write_run
 
-    query = _canonical(args.query, QUERIES)
+    query = _canonical(args.query, RUN_QUERIES)
     retriever = _canonical(args.retriever, FIRST_STAGE)
     reranker = _canonical(args.reranker, RERANKERS)
     if retriever == "late" and reranker != "none":
         print("Late interaction already scored every passage. This run keeps that ranking and does not rerank.")
         reranker = "none"
+    if query == "disproof" and retriever == "late":
+        print("The hypothetical disproof is a paragraph. Late interaction keeps the first 32 query tokens.")
     if retriever == "dense" and args.reindex:
         from retrieval.dense import build_index, query_prompt_for
         model_name = "BAAI/bge-small-en-v1.5"
@@ -79,7 +85,8 @@ def run_cell(args):
         )
 
     queries = load_queries(ROOT / "data" / "queries_v2.csv", args.split, args.set, args.limit)
-    searches = search_strings(queries, query, ROOT / "runs" / "rewrite.csv")
+    query_file = ROOT / "runs" / ("disproof.csv" if query == "disproof" else "rewrite.csv")
+    searches = search_strings(queries, query, query_file)
     print(f"{mode_name(query, retriever, reranker, args.k)}: {len(queries)} claims, {len(searches)} searches, k={args.k}")
     gpu_reset()
     started = time.perf_counter()
@@ -113,6 +120,7 @@ def run_cell(args):
         "bm25": {"k1": args.k1, "b": args.b},
         "filters": {"split": args.split, "set": args.set, "limit": args.limit},
         "rewrite": str((ROOT / "runs" / "rewrite.csv").resolve()) if query == "rewrite" else None,
+        "disproof": str((ROOT / "runs" / "disproof.csv").resolve()) if query == "disproof" else None,
         "word_limit": 400,
         "cost": cost,
         "note": (
@@ -120,7 +128,11 @@ def run_cell(args):
             "Each passage is clipped to 400 words. This is not one of the 12 systems."
             if retriever == "late" else
             "The reranker scores the original claim against the first 400 words of each passage. "
-            "Rewritten queries are fused into the first-stage list, and the title is one of those queries."
+            + (
+                "A hypothetical disproof is fused with the title. It is a search string, not a verdict."
+                if query == "disproof" else
+                "Rewritten queries are fused into the first-stage list, and the title is one of those queries."
+            )
         ),
     }
     print(summarize(cost))
@@ -157,6 +169,14 @@ def rewrite_cmd(args):
     rewrite(queries, ROOT / "runs" / "rewrite.csv", model_name=args.model, n_questions=args.questions)
 
 
+def disproof_cmd(args):
+    from pipeline.disproof import disproof
+    from pipeline.retrieve import load_queries
+    _reject_qwen(args.model)
+    queries = load_queries(ROOT / "data" / "queries_v2.csv", args.split, args.set, args.limit)
+    disproof(queries, ROOT / "runs" / "disproof.csv", model_name=args.model)
+
+
 def report_cmd(args):
     from pipeline.report import report
     report(args.split or "dev", args.set)
@@ -187,7 +207,7 @@ def parser():
     sub = ap.add_subparsers(dest="cmd", required=True)
 
     run = sub.add_parser("run", parents=[parent], help="retrieve, optionally rerank, optionally judge")
-    run.add_argument("--query", choices=[*QUERIES], default="title")
+    run.add_argument("--query", choices=[*RUN_QUERIES], default="title")
     run.add_argument("--retriever", default="dense", help="bm25, dense, or late. late searches the whole passage set")
     run.add_argument("--reranker", default="none", help="none, cross, or late")
     run.add_argument("--k", type=int, default=100, help="passages kept. k other than 100 is written to its own folder")
@@ -204,6 +224,10 @@ def parser():
     rw.add_argument("--questions", type=int, default=10, help="questions per claim; the paper uses 10")
     rw.add_argument("--model", default=None, help="default is Llama-3.1-8B-Instruct")
     rw.set_defaults(func=rewrite_cmd)
+
+    hyp = sub.add_parser("disproof", parents=[parent], help="write one hypothetical disproof per claim")
+    hyp.add_argument("--model", default=None, help="default is Llama-3.1-8B-Instruct")
+    hyp.set_defaults(func=disproof_cmd)
 
     listed = sub.add_parser("list", help="show which of the 12 dev runs are on disk")
     listed.set_defaults(func=list_cmd)
@@ -222,7 +246,7 @@ def _with_default_model(args):
 
 def main(argv=None):
     args = parser().parse_args(argv)
-    if args.cmd == "rewrite":
+    if args.cmd in {"rewrite", "disproof"}:
         args = _with_default_model(args)
     args.func(args)
 

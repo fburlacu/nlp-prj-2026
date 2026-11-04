@@ -46,10 +46,14 @@ def search_strings(queries, query_mode, rewrite_path, quiet=False):
         return base.reset_index(drop=True)
 
     path = Path(rewrite_path)
+    column = "disproof" if query_mode == "disproof" else "search_query"
+    command = "python main.py disproof --split dev" if query_mode == "disproof" else "python main.py rewrite --split dev"
     if not path.exists():
-        raise SystemExit(f"no rewritten queries at {path}. Run: python -m pipeline rewrite --split dev")
+        raise SystemExit(f"no {query_mode} queries at {path}. Run: {command}")
     written = pd.read_csv(path, dtype=str, keep_default_na=False)
-    by_id = {qid: group["search_query"].tolist() for qid, group in written.groupby("query_id", sort=False)}
+    if column not in written.columns:
+        raise SystemExit(f"{path} has no {column} column")
+    by_id = {qid: group[column].tolist() for qid, group in written.groupby("query_id", sort=False)}
     rows = []
     missing = 0
     for record in base.to_dict("records"):
@@ -63,7 +67,8 @@ def search_strings(queries, query_mode, rewrite_path, quiet=False):
         for text in strings:
             rows.append({**record, "text": text})
     if missing and not quiet:
-        print(f"{missing} claims have no rewritten queries; those searches use the title only")
+        kind = "hypothetical disproof" if query_mode == "disproof" else "rewritten queries"
+        print(f"{missing} claims have no {kind}; those searches use the title only")
     return pd.DataFrame(rows)
 
 

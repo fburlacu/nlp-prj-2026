@@ -231,7 +231,8 @@ def cost_for(name, parquet, split):
         filters.get("limit"),
         quiet=True,
     )
-    searches = search_strings(queries, query, ROOT / "runs" / "rewrite.csv", quiet=True)
+    query_file = "disproof.csv" if query == "disproof" else "rewrite.csv"
+    searches = search_strings(queries, query, ROOT / "runs" / query_file, quiet=True)
     derived = counts(retriever, reranker, searches, _ranked_rows(parquet, reranker))
     derived["retrieve_s"] = recorded.get("retrieve_s")
     derived["rerank_s"] = recorded.get("rerank_s")

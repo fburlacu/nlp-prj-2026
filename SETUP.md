@@ -83,6 +83,16 @@ python main.py run --query title --retriever dense --reranker late --k 200 --spl
 python main.py report --split dev
 ```
 
+A hypothetical disproof is a separate dev query. Llama writes one corrective paragraph per claim. That paragraph is fused with the title and searched. It is not a verdict, and the question rewrite in `runs/rewrite.csv` is left as it is. This is not part of the test grid.
+
+```bash
+export CUDA_VISIBLE_DEVICES=0
+python main.py disproof --split dev
+python main.py run --query disproof --retriever bm25 --reranker none --split dev --retrieve-only
+python main.py run --query disproof --retriever dense --reranker none --split dev --retrieve-only
+python main.py report --split dev
+```
+
 Rewrite is unchanged. `python main.py rewrite` and every `rewrite_*` dev run stay as they are. Test does not call rewrite, because those runs did not raise Hit@5.
 
 The test grid is the title, then BM25, dense, or late interaction over every passage, then a reranker. BM25 and dense use no reranker, the cross-encoder, or late interaction. Pure late already scored every passage, so that run stops there. The k=200 checks stay on dev. On this two-A10 container, GPU 0 was free and GPU 1 was already taken; check `nvidia-smi` before changing the device. The report fills in time and GPU peak for these runs.
