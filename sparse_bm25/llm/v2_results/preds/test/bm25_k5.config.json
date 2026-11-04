@@ -2,7 +2,7 @@
   "model": "meta-llama/Llama-3.1-8B-Instruct",
   "device": "cuda",
   "dtype": "torch.bfloat16",
-  "created_utc": "2026-10-21T14:49:16+00:00",
+  "created_utc": "2026-11-04T15:44:14+00:00",
   "command": "detect.py --run ../v2_results/runs_test/default/bm25_test_k1-1.2_b-0.75.parquet --passages ../../data/passages_v2.parquet --queries ../../data/queries_v2.csv --sets main article --split test --k 5 --batch_size 16 --output v2_results/preds/test/bm25_k5.csv",
   "mode": "rag",
   "params": {
@@ -34,7 +34,6 @@
     "scoring": "next-token probability mass per answer word, renormalised; argmax"
   },
   "prompt": {
-    "variant": "default",
     "system": "You are a fact-checking assistant. You judge whether a claim is disinformation, using only the evidence you are given. Answer with exactly one word: false, true or unknown.",
     "user": "Claim: {claim}\n\nEvidence:\n{evidence}\n\nBased only on the evidence above, is the claim:\nfalse - the evidence refutes the claim, or shows that it is a documented disinformation narrative\ntrue - the evidence supports the claim\nunknown - the evidence is not sufficient to decide\n\nAnswer with one word (false, true or unknown).",
     "passage_types": {
@@ -69,9 +68,9 @@
     }
   },
   "timing_this_session": {
-    "model_load_s": 3.1,
+    "model_load_s": 2.3,
     "n_queries": 1104,
-    "llm_s_per_query": 0.1039,
+    "llm_s_per_query": 0.1121,
     "prompt_tokens_mean": 1319.5,
     "gpu_peak_mem_gb": 27.37
   },

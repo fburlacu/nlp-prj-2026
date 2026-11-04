@@ -2,7 +2,7 @@
   "model": "meta-llama/Llama-3.1-8B-Instruct",
   "device": "cuda",
   "dtype": "torch.bfloat16",
-  "created_utc": "2026-10-21T14:47:02+00:00",
+  "created_utc": "2026-11-04T15:40:46+00:00",
   "command": "detect.py --queries ../../data/queries_v2.csv --sets main article --split test --batch_size 16 --output v2_results/preds/test/noretrieval.csv",
   "mode": "no_retrieval",
   "params": {
@@ -34,7 +34,6 @@
     "scoring": "next-token probability mass per answer word, renormalised; argmax"
   },
   "prompt": {
-    "variant": "no_retrieval",
     "system": "You are a fact-checking assistant. You judge whether a claim is disinformation, using only the evidence you are given. Answer with exactly one word: false, true or unknown.",
     "user": "Claim: {claim}\n\nNo evidence is available. Based on your own knowledge, is the claim:\nfalse - the claim is false or a known disinformation narrative\ntrue - the claim is true\nunknown - you cannot decide\n\nAnswer with one word (false, true or unknown).",
     "passage_types": {
@@ -69,9 +68,9 @@
     }
   },
   "timing_this_session": {
-    "model_load_s": 3.1,
+    "model_load_s": 65.8,
     "n_queries": 1104,
-    "llm_s_per_query": 0.0071,
+    "llm_s_per_query": 0.1437,
     "prompt_tokens_mean": 140.6,
     "gpu_peak_mem_gb": 15.62
   },

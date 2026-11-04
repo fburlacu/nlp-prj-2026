@@ -1267,7 +1267,7 @@
       "mode": "no_retrieval",
       "k": 0,
       "prompt_tokens_mean": 140.6,
-      "llm_s_per_query": 0.0071,
+      "llm_s_per_query": 0.1437,
       "gpu_peak_mem_gb": 15.62,
       "retrieval_ms_per_query": null
     },
@@ -1275,7 +1275,7 @@
       "mode": "rag",
       "k": 5,
       "prompt_tokens_mean": 1319.5,
-      "llm_s_per_query": 0.1039,
+      "llm_s_per_query": 0.1121,
       "gpu_peak_mem_gb": 27.37,
       "retrieval_ms_per_query": 0.421
     },
@@ -1283,7 +1283,7 @@
       "mode": "rag",
       "k": 5,
       "prompt_tokens_mean": 1424.2,
-      "llm_s_per_query": 0.1137,
+      "llm_s_per_query": 0.1112,
       "gpu_peak_mem_gb": 27.37,
       "retrieval_ms_per_query": 0.442
     }

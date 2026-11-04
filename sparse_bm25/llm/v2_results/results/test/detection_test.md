@@ -201,8 +201,8 @@ Disinformation recall by group
 
 | File | Mode | k | Prompt tokens (mean) | LLM s / query | GPU peak GB | Retrieval ms / query (p50) |
 |---|---|---:|---:|---:|---:|---:|
-| noretrieval | no_retrieval | 0 | 140.6 | 0.0071 | 15.62 | – |
-| bm25_k5 | rag | 5 | 1319.5 | 0.1039 | 27.37 | 0.421 |
-| bm25_sens_k5 | rag | 5 | 1424.2 | 0.1137 | 27.37 | 0.442 |
+| noretrieval | no_retrieval | 0 | 140.6 | 0.1437 | 15.62 | – |
+| bm25_k5 | rag | 5 | 1319.5 | 0.1121 | 27.37 | 0.421 |
+| bm25_sens_k5 | rag | 5 | 1424.2 | 0.1112 | 27.37 | 0.442 |
 
 Command: `eval_detection.py --queries ../../data/queries_v2.csv --preds v2_results/preds/test/noretrieval.csv v2_results/preds/test/bm25_k5.csv v2_results/preds/test/bm25_sens_k5.csv --retrieval ../v2_results/results/test_compare/retrieval_test.per_query.csv --output v2_results/results/test/detection_test.csv`

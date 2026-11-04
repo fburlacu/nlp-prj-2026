@@ -37,33 +37,62 @@ from huggingface_hub import try_to_load_from_cache
 from transformers import AutoTokenizer, AutoModelForCausalLM
 
 MODEL = "meta-llama/Llama-3.1-8B-Instruct"
-ANSWERS = {"false": "disinformation", "true": "fact", "unknown": "inconclusive"}
+ANSWERS = {"disinformation", "fact", "inconclusive"}
 # passage type (v1 doc_type / v2 source) -> label shown to the model
 TYPE_NAME = {"eeas_claim": "EUvsDisinfo database: documented disinformation claim",
              "eeas_disproof": "EUvsDisinfo database: analysts' refutation",
              "article": "News article", "leite_article": "News article"}
 
-SYSTEM = ("You are a fact-checking assistant. You judge whether a claim is disinformation, using only "
-          "the evidence you are given. Answer with exactly one word: false, true or unknown.")
-RAG_PROMPT = """Claim: {claim}
+# SYSTEM = ("You are a fact-checking assistant. You judge whether a claim is disinformation, using only "
+#           "the evidence you are given. Answer with exactly one word: false, true or unknown.")
+# RAG_PROMPT = """Claim: {claim}
 
-Evidence:
-{evidence}
+# Evidence:
+# {evidence}
 
-Based only on the evidence above, is the claim:
-false - the evidence refutes the claim, or shows that it is a documented disinformation narrative
-true - the evidence supports the claim
-unknown - the evidence is not sufficient to decide
+# Based only on the evidence above, is the claim:
+# false - the evidence refutes the claim, or shows that it is a documented disinformation narrative
+# true - the evidence supports the claim
+# unknown - the evidence is not sufficient to decide
 
-Answer with one word (false, true or unknown)."""
-NO_RAG_PROMPT = """Claim: {claim}
+# Answer with one word (false, true or unknown)."""
+# NO_RAG_PROMPT = """Claim: {claim}
 
-No evidence is available. Based on your own knowledge, is the claim:
-false - the claim is false or a known disinformation narrative
-true - the claim is true
-unknown - you cannot decide
+# No evidence is available. Based on your own knowledge, is the claim:
+# false - the claim is false or a known disinformation narrative
+# true - the claim is true
+# unknown - you cannot decide
 
-Answer with one word (false, true or unknown)."""
+# Answer with one word (false, true or unknown)."""
+
+SYSTEM = (
+    "You check a news claim against retrieved evidence. "
+    "Reply with exactly one word: disinformation, fact, or inconclusive. "
+    "disinformation means the evidence refutes the claim. "
+    "fact means the evidence supports the claim. "
+    "inconclusive means the evidence is missing, off-topic, or not enough to decide."
+)
+EXAMPLES = [
+    (
+        "NATO troops are fighting in Ukraine",
+        "[1] NATO has not deployed combat troops to Ukraine. "
+        "Member states provide equipment and training only.",
+        "disinformation",
+    ),
+    (
+        "The EU adopted a new sanctions package against Russian banks",
+        "[1] EU countries agreed a further sanctions package targeting "
+        "Russian banks and energy revenue.",
+        "fact",
+    ),
+    (
+        "A meteor destroyed the Kerch bridge",
+        "[1] The claim that Western biolabs operate in Ukraine is unsupported. "
+        "No such laboratories exist.",
+        "inconclusive",
+    ),
+]
+INSTRUCTION = "Claim: {claim}\n\nEvidence:\n{evidence}"
 
 HERE = Path(__file__).resolve().parent
 ap = argparse.ArgumentParser()
