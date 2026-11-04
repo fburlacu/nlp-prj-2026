@@ -17,6 +17,7 @@ Usage (from the repo root):
 import argparse
 import json
 import os
+import time
 from pathlib import Path
 
 import pandas as pd
@@ -155,13 +156,20 @@ def score_batch(tok, model, batch, token_ids):
     # add_special_tokens=False: the chat string already contains <|begin_of_text|>.
     enc = tok(prompts, return_tensors="pt", padding=True, add_special_tokens=False)
     enc = enc.to(model.device)
+    lengths = enc["attention_mask"].sum(dim=1).tolist()
+    if torch.cuda.is_available():
+        torch.cuda.synchronize()
+    started = time.perf_counter()
     with torch.no_grad():
         logits = model(**enc).logits[:, -1, :].float()
+    if torch.cuda.is_available():
+        torch.cuda.synchronize()
+    forward_s = time.perf_counter() - started
     columns = [torch.logsumexp(logits[:, token_ids[name]], dim=-1) for name in VERDICTS]
     probs = torch.softmax(torch.stack(columns, dim=-1), dim=-1)
     winners = probs.argmax(dim=-1).tolist()
     scored = []
-    for row, winner, prob in zip(batch, winners, probs.tolist()):
+    for row, winner, prob, n_tokens in zip(batch, winners, probs.tolist(), lengths):
         scored.append({
             "query_id": row["query_id"],
             "text": row["text"],
@@ -170,8 +178,48 @@ def score_batch(tok, model, batch, token_ids):
             "p_fact": round(prob[1], 4),
             "p_inconclusive": round(prob[2], 4),
             "n_passages": len(row.get("passages") or []),
+            "n_prompt_tokens": int(n_tokens),
         })
-    return scored
+    return scored, forward_s
+
+
+def _reset_peak():
+    try:
+        import torch
+        if torch.cuda.is_available():
+            torch.cuda.reset_peak_memory_stats()
+    except Exception:
+        return
+
+
+def _gpu_allocated_gb():
+    try:
+        import torch
+        if not torch.cuda.is_available():
+            return None
+        allocated = torch.cuda.max_memory_allocated()
+        if allocated <= 0:
+            return None
+        return round(allocated / 1024**3, 2)
+    except Exception:
+        return None
+
+
+def _write_verdict_cost(output, done, n_scored, forward_s):
+    tokens = [record["n_prompt_tokens"] for record in done.values() if record.get("n_prompt_tokens")]
+    per_query_ms = round(forward_s / max(n_scored, 1) * 1000, 1)
+    payload = {
+        "n_scored": n_scored,
+        "prompt_tokens_mean": round(sum(tokens) / len(tokens), 1) if tokens else None,
+        "llm_s": round(forward_s, 3),
+        "llm_ms": per_query_ms,
+        "gpu_peak_gb": _gpu_allocated_gb(),
+    }
+    path = Path(output).with_name("verdict_cost.json")
+    path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    tokens_text = "—" if payload["prompt_tokens_mean"] is None else f"{payload['prompt_tokens_mean']:.0f}"
+    gpu_text = "—" if payload["gpu_peak_gb"] is None else f"{payload['gpu_peak_gb']:.1f} GB"
+    print(f"Verdict cost: prompt tokens {tokens_text}, LLM {per_query_ms:.1f} ms/claim, GPU peak {gpu_text}")
 
 
 def run(retrieval, output, cache, model=DEFAULT_MODEL, batch_size=1, max_passages=5, limit=None):
@@ -193,8 +241,10 @@ def run(retrieval, output, cache, model=DEFAULT_MODEL, batch_size=1, max_passage
     if todo:
         tok, loaded = load_model(model)
         token_ids = class_token_ids(tok)
+        _reset_peak()
         cache_path = Path(cache)
         cache_path.parent.mkdir(parents=True, exist_ok=True)
+        forward_s = 0.0
         with cache_path.open("a", encoding="utf-8") as f:
             for start in range(0, len(todo), batch_size):
                 batch = todo[start:start + batch_size]
@@ -203,13 +253,16 @@ def run(retrieval, output, cache, model=DEFAULT_MODEL, batch_size=1, max_passage
                 for row in batch:
                     passages = (row.get("passages") or [])[:max_passages]
                     prepared.append({**row, "passages": passages})
-                for record in score_batch(tok, loaded, prepared, token_ids):
+                scored, elapsed = score_batch(tok, loaded, prepared, token_ids)
+                forward_s += elapsed
+                for record in scored:
                     record["model"] = model
                     record["max_passages"] = max_passages
                     done[str(record["query_id"])] = record
                     f.write(json.dumps(record, ensure_ascii=False) + "\n")
                 print(f"  scored {min(start + batch_size, len(todo))}/{len(todo)}", end="\r")
         print()
+        _write_verdict_cost(output, done, len(todo), forward_s)
 
     ordered = [done[str(row["query_id"])] for row in rows if str(row["query_id"]) in done]
     out = pd.DataFrame(ordered)

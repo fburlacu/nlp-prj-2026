@@ -140,6 +140,7 @@ def run_cell(args):
     if args.retrieve_only:
         _print_score_command(directory, name, args.split)
         return
+    _release_retrieval()
     _reject_qwen(args.model)
     from generator.generator import DEFAULT_MODEL, run as generate
     generate(
@@ -149,6 +150,18 @@ def run_cell(args):
         model=args.model or DEFAULT_MODEL,
         max_passages=args.max_passages,
     )
+
+
+def _release_retrieval():
+    """Drop the retriever before Llama loads. The ranking is already on disk."""
+    import gc
+    gc.collect()
+    try:
+        import torch
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+    except Exception:
+        return
 
 
 def _print_score_command(directory, name, split):

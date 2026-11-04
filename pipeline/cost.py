@@ -162,6 +162,36 @@ def format_time(cost):
     return f"{total / 60:.1f} min"
 
 
+def retrieval_ms(cost):
+    """Mean retrieval-stage clock time per claim, including one model load or index build."""
+    seconds = cost.get("retrieve_s")
+    n = cost.get("n_queries") or 0
+    if seconds is None or not n:
+        return None
+    return float(seconds) / int(n) * 1000
+
+
+def format_ms(value):
+    if value is None:
+        return "—"
+    return f"{value:.1f}"
+
+
+def format_tokens(value):
+    if value is None:
+        return "—"
+    return f"{value:,.0f}"
+
+
+def _verdict_cost(verdicts):
+    if not verdicts:
+        return {}
+    path = Path(verdicts).with_name("verdict_cost.json")
+    if not path.exists():
+        return {}
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
 def summarize(cost):
     clock = format_time(cost)
     detail = ""
@@ -253,8 +283,10 @@ def section(found, split):
         "## Cost",
         "",
         "Space is the stored dense index. Computation is the number of query–passage scores.",
-        "Wall time is retrieval plus rerank, including the model load, and GPU peak is",
-        "PyTorch reserved memory. A dash means that run was written before this was recorded.",
+        "Wall time is the clock from the start of retrieval until reranking finishes, for the",
+        "whole split, including the model load or the BM25 index build. It is not CPU time",
+        "and it is not the time for one claim. GPU peak here is PyTorch reserved memory of",
+        "the retriever. A dash means that run was written before this was recorded.",
         "",
         "| Run | First stage | Rerank | Stored index | GPU peak | Wall time |",
         "| --- | --- | --- | ---: | ---: | ---: |",
@@ -273,5 +305,25 @@ def section(found, split):
         "BM25 builds its index in memory and does not save it. A late first stage encodes",
         "passages for that run and does not save the vectors. Watts are not sampled.",
         "",
+        "## Per claim",
+        "",
+        "Same four figures as a detector-cost table. Retrieval (ms) is the retrieval-stage",
+        "wall time divided by the number of claims, so one index build or model load is",
+        "spread across the split. Prompt tokens are the mean length of the verdict prompt.",
+        "LLM (ms) is the verdict forward pass per claim, excluding the weight load.",
+        "GPU peak in this table is PyTorch allocated memory while that model runs.",
+        "Prompt tokens, LLM time, and that GPU peak stay empty until the verdict model runs.",
+        "",
+        "| Run | Retrieval (ms) | Prompt tokens | LLM (ms) | GPU peak (GB) |",
+        "| --- | ---: | ---: | ---: | ---: |",
     ]
+    for name, parquet, _, verdicts in found:
+        cost = cost_for(name, parquet, split)
+        verdict = _verdict_cost(verdicts)
+        lines.append(
+            f"| {label(name)} | {format_ms(retrieval_ms(cost))} | "
+            f"{format_tokens(verdict.get('prompt_tokens_mean'))} | "
+            f"{format_ms(verdict.get('llm_ms'))} | {format_ms(verdict.get('gpu_peak_gb'))} |"
+        )
+    lines.append("")
     return "\n".join(lines)
