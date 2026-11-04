@@ -42,7 +42,12 @@ ap.add_argument("--preds", nargs="+", required=True, help="prediction files; the
 ap.add_argument("--queries", default=str(HERE.parent / "data" / "queries_v2.csv"))
 ap.add_argument("--retrieval", help="optional per_query.csv from eval_retrieval.py, for the hit/miss breakdown")
 ap.add_argument("--output", required=True, help="summary file (.csv)")
+ap.add_argument("--task", choices=["3way", "binary"], default="3way",
+                help="binary scores fact vs disinformation and drops the inconclusive wording")
 a = ap.parse_args()
+if a.task == "binary":
+    LABELS = {"main": ["disinformation", "fact"], "article": ["disinformation", "fact"],
+              "both": ["disinformation", "fact"]}
 
 rng = np.random.default_rng(SEED)
 queries = pd.read_csv(a.queries, dtype=str, keep_default_na=False)
@@ -114,8 +119,16 @@ files = [(n, p[p["query_id"].isin(common)].sort_values("query_id").reset_index(d
 
 # ---------------- summary ----------------
 rows, conf = [], {}
+def _blocks(frame):
+    blocks = list(frame.groupby(["set", "split"]))
+    sets = frame["set"].nunique() if len(frame) else 0
+    if a.task == "binary" and sets > 1:
+        blocks.append((("both", frame["split"].iloc[0]), frame))
+    return blocks
+
+
 for name, p, _ in files:
-    for (s, spl), g in p.groupby(["set", "split"]):
+    for (s, spl), g in _blocks(p):
         y, pr = g["label"].to_numpy(), g["pred"].to_numpy()
         for metric, (v, lo, hi) in boot(y, pr, LABELS[s]).items():
             rows.append((name, s, spl, "all", metric, len(g), v, lo, hi))
@@ -133,7 +146,7 @@ summary = pd.DataFrame(rows, columns=["preds", "set", "split", "group", "metric"
 paired = []
 base_name, base, _ = files[0]
 for name, p, _ in files[1:]:
-    for (s, spl), g in base.groupby(["set", "split"]):
+    for (s, spl), g in _blocks(base):
         g2 = p.loc[g.index]
         for metric, (v, lo, hi) in boot(g["label"].to_numpy(), g["pred"].to_numpy(), LABELS[s],
                                         g2["label"].to_numpy(), g2["pred"].to_numpy()).items():
@@ -181,8 +194,13 @@ cell = lambda r, f=f2: f"{f(r['mean'])} [{f(r['ci_lo'])}, {f(r['ci_hi'])}]"
 md = ["# Detection evaluation", "",
       f"Prediction files: {', '.join(f'`{n}`' for n in names)} | {len(common)} queries | "
       f"cells: mean [95% bootstrap CI, {N_BOOT} resamples]", "",
-      "Main set: disinformation vs inconclusive (case held out, the model should answer *unknown*). "
-      "Article set: disinformation vs fact. Predictions are 3-way; off-label = a class outside the set's label space.", ""]
+      (
+          "Leite articles only. The model answers disinformation or fact. "
+          "Off-label is a prediction outside those two words."
+          if a.task == "binary" else
+          "Main set: disinformation vs inconclusive (case held out, the model should answer *unknown*). "
+          "Article set: disinformation vs fact. Predictions are 3-way; off-label = a class outside the set's label space."
+      ), ""]
 for name, p, _ in files:
     md += [f"## {name}", ""]
     for (s, spl), g in summary[(summary["preds"] == name) & (summary["group"] == "all")].groupby(["set", "split"]):

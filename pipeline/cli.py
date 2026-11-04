@@ -190,8 +190,21 @@ def disproof_cmd(args):
     disproof(queries, ROOT / "runs" / "disproof.csv", model_name=args.model)
 
 
+def binary_cmd(args):
+    if args.split not in {"dev", "test"}:
+        raise SystemExit("pass --split dev or --split test")
+    _reject_qwen(args.model)
+    from pipeline.binary import run_split
+    run_split(args.split, args.model, args.max_passages)
+
+
 def report_cmd(args):
-    from pipeline.report import report
+    from pipeline.report import report, report_binary
+    if args.binary:
+        if args.split not in {"dev", "test"}:
+            raise SystemExit("pass --split dev or --split test")
+        report_binary(args.split)
+        return
     report(args.split or "dev", args.set)
 
 
@@ -238,6 +251,11 @@ def parser():
     rw.add_argument("--model", default=None, help="default is Llama-3.1-8B-Instruct")
     rw.set_defaults(func=rewrite_cmd)
 
+    binary = sub.add_parser("binary", parents=[parent], help="fact versus disinformation verdicts, stored apart from the 3-way runs")
+    binary.add_argument("--model", default=None, help="default is Llama-3.1-8B-Instruct")
+    binary.add_argument("--max-passages", type=int, default=5, help="passages the verdict model reads")
+    binary.set_defaults(func=binary_cmd)
+
     hyp = sub.add_parser("disproof", parents=[parent], help="write one hypothetical disproof per claim")
     hyp.add_argument("--model", default=None, help="default is Llama-3.1-8B-Instruct")
     hyp.set_defaults(func=disproof_cmd)
@@ -246,6 +264,7 @@ def parser():
     listed.set_defaults(func=list_cmd)
 
     compared = sub.add_parser("report", parents=[parent], help="one comparison of every system that has a run")
+    compared.add_argument("--binary", action="store_true", help="score the fact versus disinformation verdicts")
     compared.set_defaults(func=report_cmd)
     return ap
 
@@ -259,7 +278,7 @@ def _with_default_model(args):
 
 def main(argv=None):
     args = parser().parse_args(argv)
-    if args.cmd in {"rewrite", "disproof"}:
+    if args.cmd in {"rewrite", "disproof", "binary"}:
         args = _with_default_model(args)
     args.func(args)
 

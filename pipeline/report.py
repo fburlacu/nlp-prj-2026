@@ -132,6 +132,49 @@ def _run(script, args):
     subprocess.run([sys.executable, str(ROOT / script), *args], check=True, cwd=ROOT)
 
 
+def report_binary(split):
+    """Score fact-versus-disinformation verdicts. Retrieval tables stay in the three-way report."""
+    found, missing = [], []
+    for cell in test_cells():
+        name = mode_name(*cell)
+        verdicts = ROOT / "runs" / "binary" / split / name / "verdicts.csv"
+        if verdicts.exists():
+            found.append((name, None, None, verdicts))
+        else:
+            missing.append(name)
+    if not found:
+        raise SystemExit("no binary verdicts. " + ", ".join(missing))
+    destination = ROOT / "results" / "comparison" / f"{split}_binary"
+    destination.mkdir(parents=True, exist_ok=True)
+    paths = _verdict_files(found, destination)
+    detection_csv = destination / "detection.csv"
+    _run("analysis/eval_detection.py", [
+        "--preds", *map(str, paths),
+        "--queries", str(ROOT / "data" / "queries_v2.csv"),
+        "--task", "binary",
+        "--output", str(detection_csv),
+    ])
+    detection_md = detection_csv.with_suffix(".md").read_text(encoding="utf-8")
+    included = ", ".join(name for name, *_ in found)
+    absent = ", ".join(missing) if missing else "none"
+    body = "\n".join([
+        f"# Comparison, {split}, fact versus disinformation",
+        "",
+        f"Included: {included}.",
+        f"Not run yet: {absent}.",
+        "",
+        "Leite articles only. The verdict model chooses disinformation or fact.",
+        "These files do not replace the three-way comparison.",
+        "",
+    ]) + detection_md
+    report_path = destination / "comparison.md"
+    report_path.write_text(body, encoding="utf-8")
+    print(f"Wrote {report_path}")
+    if missing:
+        print(f"Still missing: {', '.join(missing)}")
+    return report_path
+
+
 def report(split, query_set=None):
     found, missing = _runs(split)
     if not found:

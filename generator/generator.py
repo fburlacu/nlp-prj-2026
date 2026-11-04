@@ -25,6 +25,7 @@ import pandas as pd
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_MODEL = "meta-llama/Llama-3.1-8B-Instruct"
 VERDICTS = ("disinformation", "fact", "inconclusive")
+BINARY_VERDICTS = ("disinformation", "fact")
 
 SYSTEM = (
     "You check a news claim against retrieved evidence. "
@@ -54,6 +55,13 @@ EXAMPLES = [
     ),
 ]
 INSTRUCTION = "Claim: {claim}\n\nEvidence:\n{evidence}"
+BINARY_SYSTEM = (
+    "You check a news claim against retrieved evidence. "
+    "Reply with exactly one word: disinformation or fact. "
+    "disinformation means the evidence refutes the claim. "
+    "fact means the evidence supports the claim."
+)
+BINARY_EXAMPLES = EXAMPLES[:2]
 
 
 def format_evidence(passages, max_passages):
@@ -66,20 +74,20 @@ def format_evidence(passages, max_passages):
     return "\n\n".join(blocks)
 
 
-def build_messages(claim, evidence):
-    msgs = [{"role": "system", "content": SYSTEM}]
-    for example_claim, example_evidence, answer in EXAMPLES:
+def build_messages(claim, evidence, system=None, examples=None):
+    msgs = [{"role": "system", "content": SYSTEM if system is None else system}]
+    for example_claim, example_evidence, answer in (EXAMPLES if examples is None else examples):
         msgs.append({"role": "user", "content": INSTRUCTION.format(claim=example_claim, evidence=example_evidence)})
         msgs.append({"role": "assistant", "content": answer})
     msgs.append({"role": "user", "content": INSTRUCTION.format(claim=claim, evidence=evidence)})
     return msgs
 
 
-def class_token_ids(tok):
+def class_token_ids(tok, names=None):
     """First-token ids for each verdict. A token claimed by two labels is dropped."""
     taken = {}
     out = {}
-    for name in VERDICTS:
+    for name in (VERDICTS if names is None else names):
         ids = []
         for word in (name, name.capitalize(), " " + name, " " + name.capitalize()):
             enc = tok.encode(word, add_special_tokens=False)
@@ -138,9 +146,9 @@ def load_model(model_name):
     return tok, model
 
 
-def render(tok, claim, evidence):
+def render(tok, claim, evidence, system=None, examples=None):
     """Llama 3.1 chat string. The template already inserts <|begin_of_text|>."""
-    messages = build_messages(claim, evidence)
+    messages = build_messages(claim, evidence, system, examples)
     kwargs = dict(tokenize=False, add_generation_prompt=True)
     try:
         return tok.apply_chat_template(messages, enable_thinking=False, **kwargs)
@@ -148,10 +156,10 @@ def render(tok, claim, evidence):
         return tok.apply_chat_template(messages, **kwargs)
 
 
-def score_batch(tok, model, batch, token_ids):
+def score_batch(tok, model, batch, token_ids, verdicts=VERDICTS, system=None, examples=None):
     import torch
 
-    prompts = [render(tok, row["text"], format_evidence(row.get("passages") or [], None))
+    prompts = [render(tok, row["text"], format_evidence(row.get("passages") or [], None), system, examples)
                for row in batch]
     # add_special_tokens=False: the chat string already contains <|begin_of_text|>.
     enc = tok(prompts, return_tensors="pt", padding=True, add_special_tokens=False)
@@ -165,21 +173,21 @@ def score_batch(tok, model, batch, token_ids):
     if torch.cuda.is_available():
         torch.cuda.synchronize()
     forward_s = time.perf_counter() - started
-    columns = [torch.logsumexp(logits[:, token_ids[name]], dim=-1) for name in VERDICTS]
+    columns = [torch.logsumexp(logits[:, token_ids[name]], dim=-1) for name in verdicts]
     probs = torch.softmax(torch.stack(columns, dim=-1), dim=-1)
     winners = probs.argmax(dim=-1).tolist()
     scored = []
     for row, winner, prob, n_tokens in zip(batch, winners, probs.tolist(), lengths):
-        scored.append({
+        record = {
             "query_id": row["query_id"],
             "text": row["text"],
-            "verdict": VERDICTS[winner],
-            "p_disinformation": round(prob[0], 4),
-            "p_fact": round(prob[1], 4),
-            "p_inconclusive": round(prob[2], 4),
+            "verdict": verdicts[winner],
             "n_passages": len(row.get("passages") or []),
             "n_prompt_tokens": int(n_tokens),
-        })
+        }
+        for name, value in zip(verdicts, prob):
+            record[f"p_{name}"] = round(value, 4)
+        scored.append(record)
     return scored, forward_s
 
 
@@ -222,8 +230,14 @@ def _write_verdict_cost(output, done, n_scored, forward_s):
     print(f"Verdict cost: prompt tokens {tokens_text}, LLM {per_query_ms:.1f} ms/claim, GPU peak {gpu_text}")
 
 
-def run(retrieval, output, cache, model=DEFAULT_MODEL, batch_size=1, max_passages=5, limit=None):
-    """Score one retrieval run. retrieval, output and cache are filesystem paths."""
+def run(retrieval, output, cache, model=DEFAULT_MODEL, batch_size=1, max_passages=5, limit=None, binary=False):
+    """Score one retrieval run. retrieval, output and cache are filesystem paths.
+
+    binary=True asks for disinformation or fact only and writes that choice on each row.
+    """
+    verdicts = BINARY_VERDICTS if binary else VERDICTS
+    system = BINARY_SYSTEM if binary else None
+    examples = BINARY_EXAMPLES if binary else None
     if not os.path.exists(retrieval):
         raise SystemExit(f"not found: {retrieval}\nrun retrieval before the generator")
     rows = load_rows(retrieval, limit)
@@ -233,14 +247,15 @@ def run(retrieval, output, cache, model=DEFAULT_MODEL, batch_size=1, max_passage
         with open(cache, encoding="utf-8") as f:
             for line in f:
                 record = json.loads(line)
-                if record.get("model") == model and record.get("max_passages") == max_passages:
+                if record.get("model") == model and record.get("max_passages") == max_passages and bool(record.get("binary")) == binary:
                     done[str(record["query_id"])] = record
     todo = [row for row in rows if str(row["query_id"]) not in done]
-    print(f"Queries: {len(rows)} | cached: {len(rows) - len(todo)} | to score: {len(todo)} | model: {model}")
+    task = "fact or disinformation" if binary else "disinformation, fact, or inconclusive"
+    print(f"Queries: {len(rows)} | cached: {len(rows) - len(todo)} | to score: {len(todo)} | model: {model} | {task}")
 
     if todo:
         tok, loaded = load_model(model)
-        token_ids = class_token_ids(tok)
+        token_ids = class_token_ids(tok, verdicts)
         _reset_peak()
         cache_path = Path(cache)
         cache_path.parent.mkdir(parents=True, exist_ok=True)
@@ -253,11 +268,12 @@ def run(retrieval, output, cache, model=DEFAULT_MODEL, batch_size=1, max_passage
                 for row in batch:
                     passages = (row.get("passages") or [])[:max_passages]
                     prepared.append({**row, "passages": passages})
-                scored, elapsed = score_batch(tok, loaded, prepared, token_ids)
+                scored, elapsed = score_batch(tok, loaded, prepared, token_ids, verdicts, system, examples)
                 forward_s += elapsed
                 for record in scored:
                     record["model"] = model
                     record["max_passages"] = max_passages
+                    record["binary"] = binary
                     done[str(record["query_id"])] = record
                     f.write(json.dumps(record, ensure_ascii=False) + "\n")
                 print(f"  scored {min(start + batch_size, len(todo))}/{len(todo)}", end="\r")

@@ -15,6 +15,6 @@ from pipeline.cli import main
 
 if __name__ == "__main__":
     argv = sys.argv[1:]
-    if not argv or argv[0] not in {"run", "rewrite", "disproof", "list", "report", "-h", "--help"}:
+    if not argv or argv[0] not in {"run", "rewrite", "disproof", "binary", "list", "report", "-h", "--help"}:
         argv = ["run", *argv]
     main(argv)
