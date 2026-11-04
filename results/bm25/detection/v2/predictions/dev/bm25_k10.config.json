@@ -1,0 +1,75 @@
+{
+  "model": "meta-llama/Llama-3.1-8B-Instruct",
+  "device": "cuda",
+  "dtype": "torch.bfloat16",
+  "created_utc": "2026-10-21T14:32:06+00:00",
+  "command": "detect.py --run ../v2_results/runs_tune/bm25_dev_k1-1.2_b-0.75.parquet --passages ../../data/passages_v2.parquet --queries ../../data/queries_v2.csv --sets main --split dev --k 10 --batch_size 16 --output v2_results/preds/dev/bm25_k10.csv",
+  "mode": "rag",
+  "params": {
+    "k": 10,
+    "batch_size": 16,
+    "max_passage_words": 800,
+    "answers": {
+      "false": "disinformation",
+      "true": "fact",
+      "unknown": "inconclusive"
+    },
+    "answer_tokens": {
+      "false": [
+        "false",
+        "False",
+        "FALSE"
+      ],
+      "true": [
+        "true",
+        "True",
+        "TRUE"
+      ],
+      "unknown": [
+        "Unknown",
+        "unknown",
+        "UNKNOWN"
+      ]
+    },
+    "scoring": "next-token probability mass per answer word, renormalised; argmax"
+  },
+  "prompt": {
+    "system": "You are a fact-checking assistant. You judge whether a claim is disinformation, using only the evidence you are given. Answer with exactly one word: false, true or unknown.",
+    "user": "Claim: {claim}\n\nEvidence:\n{evidence}\n\nBased only on the evidence above, is the claim:\nfalse - the evidence refutes the claim, or shows that it is a documented disinformation narrative\ntrue - the evidence supports the claim\nunknown - the evidence is not sufficient to decide\n\nAnswer with one word (false, true or unknown).",
+    "passage_types": {
+      "eeas_claim": "EUvsDisinfo database: documented disinformation claim",
+      "eeas_disproof": "EUvsDisinfo database: analysts' refutation",
+      "article": "News article",
+      "leite_article": "News article"
+    }
+  },
+  "filters": {
+    "split": "dev",
+    "sets": [
+      "main"
+    ],
+    "limit": null
+  },
+  "inputs": {
+    "run": "/home/s2872927/nlp-prj-2026/sparse_bm25/v2_results/runs_tune/bm25_dev_k1-1.2_b-0.75.parquet",
+    "run_sha256": "767ea5056e7316885a051d5682db1da918649bb8bf33444224a61ce7ea77934e",
+    "passages": "/home/s2872927/nlp-prj-2026/data/passages_v2.parquet",
+    "passages_sha256": "c85690eb2b43a8fd06e8fdd00a524b66f722e63dcc7385f79f1aa58d5fe963cc",
+    "queries": "/home/s2872927/nlp-prj-2026/data/queries_v2.csv",
+    "queries_sha256": "0e77ff3bc0b649511607607908112fbbea8b01a4fbee9589df96976e2f67a88a"
+  },
+  "counts": {
+    "n_predictions": 90,
+    "pred_distribution": {
+      "disinformation": 90
+    }
+  },
+  "timing_this_session": {
+    "model_load_s": 3.1,
+    "n_queries": 90,
+    "llm_s_per_query": 0.2629,
+    "prompt_tokens_mean": 2742.8,
+    "gpu_peak_mem_gb": 31.99
+  },
+  "prompt_tokens_mean_all": 2742.8
+}

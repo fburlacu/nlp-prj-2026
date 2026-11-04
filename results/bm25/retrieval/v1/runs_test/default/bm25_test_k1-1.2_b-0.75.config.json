@@ -1,0 +1,43 @@
+{
+  "retriever": "bm25",
+  "created_utc": "2026-10-19T11:56:07+00:00",
+  "command": "retrieve.py --split test --k1 1.2 --b 0.75 --output runs_test/default/bm25_test_k1-1.2_b-0.75.parquet",
+  "params": {
+    "k1": 1.2,
+    "b": 0.75,
+    "k": 100,
+    "idf": "lucene: log(1 + (N - df + 0.5) / (df + 0.5))",
+    "tokenizer": "data.preprocessing.tokenize (lowercase, English stopwords, Snowball)"
+  },
+  "filters": {
+    "split": "test",
+    "set": null
+  },
+  "inputs": {
+    "passages": "/Users/fel/Documents/uni/nlp/project/data/passages.parquet",
+    "passages_sha256": "01642a1d62063fb9a360504af097f4c4598caf98b53dd9447b5ec8ccd05c3ba0",
+    "queries": "/Users/fel/Documents/uni/nlp/project/data/queries.csv",
+    "queries_sha256": "adcd0064fdcfb99f10fd9bb1292df34ec4a71c789dbc7abb0cb29a5bcfb2d08e"
+  },
+  "counts": {
+    "n_passages": 61646,
+    "n_queries": 1404,
+    "n_rows": 140400,
+    "vocabulary": 59340,
+    "nonzeros": 3210825,
+    "queries_by_set_label_split": {
+      "article/disinformation/test": 252,
+      "article/fact/test": 252,
+      "extra/fact/test": 300,
+      "main/disinformation/test": 300,
+      "main/inconclusive/test": 300
+    }
+  },
+  "timing": {
+    "index_build_s": 17.27,
+    "index_weights_mb": 24.5,
+    "query_ms_p50": 1.477,
+    "query_ms_p95": 4.352,
+    "query_ms_mean": 1.897
+  }
+}

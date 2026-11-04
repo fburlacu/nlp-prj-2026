@@ -1,0 +1,2991 @@
+{
+  "config": {
+    "command": "/home/jovyan/nlp-prj-2026/analysis/eval_detection.py --preds /home/jovyan/nlp-prj-2026/results/comparison/test/predictions/title_bm25_none.csv /home/jovyan/nlp-prj-2026/results/comparison/test/predictions/title_bm25_cross.csv /home/jovyan/nlp-prj-2026/results/comparison/test/predictions/title_bm25_late.csv /home/jovyan/nlp-prj-2026/results/comparison/test/predictions/title_dense_none.csv /home/jovyan/nlp-prj-2026/results/comparison/test/predictions/title_dense_cross.csv /home/jovyan/nlp-prj-2026/results/comparison/test/predictions/title_dense_late.csv /home/jovyan/nlp-prj-2026/results/comparison/test/predictions/title_late_none.csv --queries /home/jovyan/nlp-prj-2026/data/queries_v2.csv --retrieval /home/jovyan/nlp-prj-2026/results/comparison/test/retrieval.per_query.csv --output /home/jovyan/nlp-prj-2026/results/comparison/test/detection.csv",
+    "preds": [
+      "/home/jovyan/nlp-prj-2026/results/comparison/test/predictions/title_bm25_none.csv",
+      "/home/jovyan/nlp-prj-2026/results/comparison/test/predictions/title_bm25_cross.csv",
+      "/home/jovyan/nlp-prj-2026/results/comparison/test/predictions/title_bm25_late.csv",
+      "/home/jovyan/nlp-prj-2026/results/comparison/test/predictions/title_dense_none.csv",
+      "/home/jovyan/nlp-prj-2026/results/comparison/test/predictions/title_dense_cross.csv",
+      "/home/jovyan/nlp-prj-2026/results/comparison/test/predictions/title_dense_late.csv",
+      "/home/jovyan/nlp-prj-2026/results/comparison/test/predictions/title_late_none.csv"
+    ],
+    "queries": "/home/jovyan/nlp-prj-2026/data/queries_v2.csv",
+    "retrieval": "/home/jovyan/nlp-prj-2026/results/comparison/test/retrieval.per_query.csv",
+    "output": "/home/jovyan/nlp-prj-2026/results/comparison/test/detection.csv",
+    "labels": {
+      "main": [
+        "disinformation",
+        "inconclusive"
+      ],
+      "article": [
+        "disinformation",
+        "fact"
+      ]
+    },
+    "n_boot": 1000,
+    "seed": 0
+  },
+  "summary": {
+    "title_bm25_none": {
+      "article/test": {
+        "all": {
+          "accuracy": {
+            "n": 504,
+            "mean": 0.3294,
+            "ci95": [
+              0.2897,
+              0.369
+            ]
+          },
+          "precision_disinformation": {
+            "n": 504,
+            "mean": 0.7312,
+            "ci95": [
+              0.6333,
+              0.8152
+            ]
+          },
+          "recall_disinformation": {
+            "n": 504,
+            "mean": 0.2698,
+            "ci95": [
+              0.2187,
+              0.3254
+            ]
+          },
+          "f1_disinformation": {
+            "n": 504,
+            "mean": 0.3942,
+            "ci95": [
+              0.3283,
+              0.4578
+            ]
+          },
+          "precision_fact": {
+            "n": 504,
+            "mean": 0.7101,
+            "ci95": [
+              0.6341,
+              0.7868
+            ]
+          },
+          "recall_fact": {
+            "n": 504,
+            "mean": 0.3889,
+            "ci95": [
+              0.3294,
+              0.4484
+            ]
+          },
+          "f1_fact": {
+            "n": 504,
+            "mean": 0.5026,
+            "ci95": [
+              0.4398,
+              0.5608
+            ]
+          },
+          "macro_f1": {
+            "n": 504,
+            "mean": 0.4484,
+            "ci95": [
+              0.4027,
+              0.4915
+            ]
+          },
+          "off_label_rate": {
+            "n": 504,
+            "mean": 0.5417,
+            "ci95": [
+              0.498,
+              0.5853
+            ]
+          }
+        },
+        "entity": {
+          "recall_disinformation": {
+            "n": 23,
+            "mean": 0.3043,
+            "ci95": [
+              0.1304,
+              0.4793
+            ]
+          }
+        },
+        "formulation": {
+          "recall_disinformation": {
+            "n": 30,
+            "mean": 0.5,
+            "ci95": [
+              0.3333,
+              0.6667
+            ]
+          }
+        }
+      },
+      "main/test": {
+        "all": {
+          "accuracy": {
+            "n": 600,
+            "mean": 0.545,
+            "ci95": [
+              0.5066,
+              0.5883
+            ]
+          },
+          "precision_disinformation": {
+            "n": 600,
+            "mean": 0.5426,
+            "ci95": [
+              0.4926,
+              0.5905
+            ]
+          },
+          "recall_disinformation": {
+            "n": 600,
+            "mean": 0.7433,
+            "ci95": [
+              0.6911,
+              0.7951
+            ]
+          },
+          "f1_disinformation": {
+            "n": 600,
+            "mean": 0.6273,
+            "ci95": [
+              0.5841,
+              0.6694
+            ]
+          },
+          "precision_inconclusive": {
+            "n": 600,
+            "mean": 0.5977,
+            "ci95": [
+              0.528,
+              0.6757
+            ]
+          },
+          "recall_inconclusive": {
+            "n": 600,
+            "mean": 0.3467,
+            "ci95": [
+              0.2955,
+              0.4022
+            ]
+          },
+          "f1_inconclusive": {
+            "n": 600,
+            "mean": 0.4388,
+            "ci95": [
+              0.384,
+              0.4952
+            ]
+          },
+          "macro_f1": {
+            "n": 600,
+            "mean": 0.5331,
+            "ci95": [
+              0.4957,
+              0.5752
+            ]
+          },
+          "off_label_rate": {
+            "n": 600,
+            "mean": 0.025,
+            "ci95": [
+              0.0133,
+              0.0383
+            ]
+          }
+        },
+        "high": {
+          "recall_disinformation": {
+            "n": 100,
+            "mean": 0.8,
+            "ci95": [
+              0.72,
+              0.88
+            ]
+          }
+        },
+        "low": {
+          "recall_disinformation": {
+            "n": 100,
+            "mean": 0.69,
+            "ci95": [
+              0.6,
+              0.77
+            ]
+          }
+        },
+        "mid": {
+          "recall_disinformation": {
+            "n": 100,
+            "mean": 0.74,
+            "ci95": [
+              0.65,
+              0.83
+            ]
+          }
+        },
+        "long": {
+          "recall_disinformation": {
+            "n": 96,
+            "mean": 0.7708,
+            "ci95": [
+              0.6875,
+              0.8542
+            ]
+          }
+        },
+        "medium": {
+          "recall_disinformation": {
+            "n": 103,
+            "mean": 0.7379,
+            "ci95": [
+              0.6408,
+              0.8252
+            ]
+          }
+        },
+        "short": {
+          "recall_disinformation": {
+            "n": 101,
+            "mean": 0.7228,
+            "ci95": [
+              0.6238,
+              0.8119
+            ]
+          }
+        },
+        "entity": {
+          "recall_disinformation": {
+            "n": 125,
+            "mean": 0.76,
+            "ci95": [
+              0.688,
+              0.832
+            ]
+          }
+        },
+        "formulation": {
+          "recall_disinformation": {
+            "n": 175,
+            "mean": 0.7314,
+            "ci95": [
+              0.6686,
+              0.7943
+            ]
+          }
+        }
+      }
+    },
+    "title_bm25_cross": {
+      "article/test": {
+        "all": {
+          "accuracy": {
+            "n": 504,
+            "mean": 0.3234,
+            "ci95": [
+              0.2798,
+              0.3651
+            ]
+          },
+          "precision_disinformation": {
+            "n": 504,
+            "mean": 0.6742,
+            "ci95": [
+              0.5744,
+              0.7703
+            ]
+          },
+          "recall_disinformation": {
+            "n": 504,
+            "mean": 0.2381,
+            "ci95": [
+              0.1853,
+              0.292
+            ]
+          },
+          "f1_disinformation": {
+            "n": 504,
+            "mean": 0.3519,
+            "ci95": [
+              0.2848,
+              0.4154
+            ]
+          },
+          "precision_fact": {
+            "n": 504,
+            "mean": 0.6913,
+            "ci95": [
+              0.6174,
+              0.7602
+            ]
+          },
+          "recall_fact": {
+            "n": 504,
+            "mean": 0.4087,
+            "ci95": [
+              0.3459,
+              0.4701
+            ]
+          },
+          "f1_fact": {
+            "n": 504,
+            "mean": 0.5137,
+            "ci95": [
+              0.4491,
+              0.5701
+            ]
+          },
+          "macro_f1": {
+            "n": 504,
+            "mean": 0.4328,
+            "ci95": [
+              0.3827,
+              0.4789
+            ]
+          },
+          "off_label_rate": {
+            "n": 504,
+            "mean": 0.5278,
+            "ci95": [
+              0.4841,
+              0.5715
+            ]
+          }
+        },
+        "entity": {
+          "recall_disinformation": {
+            "n": 23,
+            "mean": 0.3913,
+            "ci95": [
+              0.2174,
+              0.6087
+            ]
+          }
+        },
+        "formulation": {
+          "recall_disinformation": {
+            "n": 30,
+            "mean": 0.4,
+            "ci95": [
+              0.2333,
+              0.6
+            ]
+          }
+        }
+      },
+      "main/test": {
+        "all": {
+          "accuracy": {
+            "n": 600,
+            "mean": 0.52,
+            "ci95": [
+              0.48,
+              0.5617
+            ]
+          },
+          "precision_disinformation": {
+            "n": 600,
+            "mean": 0.5308,
+            "ci95": [
+              0.4785,
+              0.581
+            ]
+          },
+          "recall_disinformation": {
+            "n": 600,
+            "mean": 0.69,
+            "ci95": [
+              0.6366,
+              0.7436
+            ]
+          },
+          "f1_disinformation": {
+            "n": 600,
+            "mean": 0.6,
+            "ci95": [
+              0.5544,
+              0.6432
+            ]
+          },
+          "precision_inconclusive": {
+            "n": 600,
+            "mean": 0.5738,
+            "ci95": [
+              0.5028,
+              0.6506
+            ]
+          },
+          "recall_inconclusive": {
+            "n": 600,
+            "mean": 0.35,
+            "ci95": [
+              0.2992,
+              0.4038
+            ]
+          },
+          "f1_inconclusive": {
+            "n": 600,
+            "mean": 0.4348,
+            "ci95": [
+              0.3808,
+              0.4878
+            ]
+          },
+          "macro_f1": {
+            "n": 600,
+            "mean": 0.5174,
+            "ci95": [
+              0.476,
+              0.5571
+            ]
+          },
+          "off_label_rate": {
+            "n": 600,
+            "mean": 0.045,
+            "ci95": [
+              0.03,
+              0.0617
+            ]
+          }
+        },
+        "high": {
+          "recall_disinformation": {
+            "n": 100,
+            "mean": 0.68,
+            "ci95": [
+              0.58,
+              0.77
+            ]
+          }
+        },
+        "low": {
+          "recall_disinformation": {
+            "n": 100,
+            "mean": 0.62,
+            "ci95": [
+              0.52,
+              0.71
+            ]
+          }
+        },
+        "mid": {
+          "recall_disinformation": {
+            "n": 100,
+            "mean": 0.77,
+            "ci95": [
+              0.69,
+              0.85
+            ]
+          }
+        },
+        "long": {
+          "recall_disinformation": {
+            "n": 96,
+            "mean": 0.7604,
+            "ci95": [
+              0.6768,
+              0.8438
+            ]
+          }
+        },
+        "medium": {
+          "recall_disinformation": {
+            "n": 103,
+            "mean": 0.6505,
+            "ci95": [
+              0.5631,
+              0.7476
+            ]
+          }
+        },
+        "short": {
+          "recall_disinformation": {
+            "n": 101,
+            "mean": 0.6634,
+            "ci95": [
+              0.5743,
+              0.7624
+            ]
+          }
+        },
+        "entity": {
+          "recall_disinformation": {
+            "n": 125,
+            "mean": 0.696,
+            "ci95": [
+              0.616,
+              0.784
+            ]
+          }
+        },
+        "formulation": {
+          "recall_disinformation": {
+            "n": 175,
+            "mean": 0.6857,
+            "ci95": [
+              0.6171,
+              0.7543
+            ]
+          }
+        }
+      }
+    },
+    "title_bm25_late": {
+      "article/test": {
+        "all": {
+          "accuracy": {
+            "n": 504,
+            "mean": 0.3492,
+            "ci95": [
+              0.3075,
+              0.3909
+            ]
+          },
+          "precision_disinformation": {
+            "n": 504,
+            "mean": 0.6792,
+            "ci95": [
+              0.5825,
+              0.7604
+            ]
+          },
+          "recall_disinformation": {
+            "n": 504,
+            "mean": 0.2857,
+            "ci95": [
+              0.2296,
+              0.3386
+            ]
+          },
+          "f1_disinformation": {
+            "n": 504,
+            "mean": 0.4022,
+            "ci95": [
+              0.3363,
+              0.4611
+            ]
+          },
+          "precision_fact": {
+            "n": 504,
+            "mean": 0.6624,
+            "ci95": [
+              0.5886,
+              0.7342
+            ]
+          },
+          "recall_fact": {
+            "n": 504,
+            "mean": 0.4127,
+            "ci95": [
+              0.3456,
+              0.4737
+            ]
+          },
+          "f1_fact": {
+            "n": 504,
+            "mean": 0.5086,
+            "ci95": [
+              0.445,
+              0.5644
+            ]
+          },
+          "macro_f1": {
+            "n": 504,
+            "mean": 0.4554,
+            "ci95": [
+              0.407,
+              0.499
+            ]
+          },
+          "off_label_rate": {
+            "n": 504,
+            "mean": 0.4782,
+            "ci95": [
+              0.4365,
+              0.5219
+            ]
+          }
+        },
+        "entity": {
+          "recall_disinformation": {
+            "n": 23,
+            "mean": 0.3478,
+            "ci95": [
+              0.1739,
+              0.5652
+            ]
+          }
+        },
+        "formulation": {
+          "recall_disinformation": {
+            "n": 30,
+            "mean": 0.5333,
+            "ci95": [
+              0.3667,
+              0.7333
+            ]
+          }
+        }
+      },
+      "main/test": {
+        "all": {
+          "accuracy": {
+            "n": 600,
+            "mean": 0.485,
+            "ci95": [
+              0.4483,
+              0.5233
+            ]
+          },
+          "precision_disinformation": {
+            "n": 600,
+            "mean": 0.5086,
+            "ci95": [
+              0.4581,
+              0.5586
+            ]
+          },
+          "recall_disinformation": {
+            "n": 600,
+            "mean": 0.69,
+            "ci95": [
+              0.6381,
+              0.7411
+            ]
+          },
+          "f1_disinformation": {
+            "n": 600,
+            "mean": 0.5856,
+            "ci95": [
+              0.5404,
+              0.628
+            ]
+          },
+          "precision_inconclusive": {
+            "n": 600,
+            "mean": 0.5153,
+            "ci95": [
+              0.443,
+              0.589
+            ]
+          },
+          "recall_inconclusive": {
+            "n": 600,
+            "mean": 0.28,
+            "ci95": [
+              0.2331,
+              0.3322
+            ]
+          },
+          "f1_inconclusive": {
+            "n": 600,
+            "mean": 0.3629,
+            "ci95": [
+              0.3097,
+              0.4193
+            ]
+          },
+          "macro_f1": {
+            "n": 600,
+            "mean": 0.4742,
+            "ci95": [
+              0.4362,
+              0.5133
+            ]
+          },
+          "off_label_rate": {
+            "n": 600,
+            "mean": 0.05,
+            "ci95": [
+              0.0333,
+              0.0683
+            ]
+          }
+        },
+        "high": {
+          "recall_disinformation": {
+            "n": 100,
+            "mean": 0.68,
+            "ci95": [
+              0.58,
+              0.77
+            ]
+          }
+        },
+        "low": {
+          "recall_disinformation": {
+            "n": 100,
+            "mean": 0.61,
+            "ci95": [
+              0.52,
+              0.7
+            ]
+          }
+        },
+        "mid": {
+          "recall_disinformation": {
+            "n": 100,
+            "mean": 0.78,
+            "ci95": [
+              0.6997,
+              0.86
+            ]
+          }
+        },
+        "long": {
+          "recall_disinformation": {
+            "n": 96,
+            "mean": 0.7396,
+            "ci95": [
+              0.6562,
+              0.8229
+            ]
+          }
+        },
+        "medium": {
+          "recall_disinformation": {
+            "n": 103,
+            "mean": 0.6505,
+            "ci95": [
+              0.5631,
+              0.7379
+            ]
+          }
+        },
+        "short": {
+          "recall_disinformation": {
+            "n": 101,
+            "mean": 0.6832,
+            "ci95": [
+              0.5941,
+              0.7723
+            ]
+          }
+        },
+        "entity": {
+          "recall_disinformation": {
+            "n": 125,
+            "mean": 0.688,
+            "ci95": [
+              0.608,
+              0.768
+            ]
+          }
+        },
+        "formulation": {
+          "recall_disinformation": {
+            "n": 175,
+            "mean": 0.6914,
+            "ci95": [
+              0.6229,
+              0.76
+            ]
+          }
+        }
+      }
+    },
+    "title_dense_none": {
+      "article/test": {
+        "all": {
+          "accuracy": {
+            "n": 504,
+            "mean": 0.3353,
+            "ci95": [
+              0.2937,
+              0.377
+            ]
+          },
+          "precision_disinformation": {
+            "n": 504,
+            "mean": 0.6939,
+            "ci95": [
+              0.6023,
+              0.7849
+            ]
+          },
+          "recall_disinformation": {
+            "n": 504,
+            "mean": 0.2698,
+            "ci95": [
+              0.2137,
+              0.3229
+            ]
+          },
+          "f1_disinformation": {
+            "n": 504,
+            "mean": 0.3886,
+            "ci95": [
+              0.3207,
+              0.4509
+            ]
+          },
+          "precision_fact": {
+            "n": 504,
+            "mean": 0.6601,
+            "ci95": [
+              0.5833,
+              0.7329
+            ]
+          },
+          "recall_fact": {
+            "n": 504,
+            "mean": 0.4008,
+            "ci95": [
+              0.3424,
+              0.4646
+            ]
+          },
+          "f1_fact": {
+            "n": 504,
+            "mean": 0.4988,
+            "ci95": [
+              0.4428,
+              0.5571
+            ]
+          },
+          "macro_f1": {
+            "n": 504,
+            "mean": 0.4437,
+            "ci95": [
+              0.3969,
+              0.4915
+            ]
+          },
+          "off_label_rate": {
+            "n": 504,
+            "mean": 0.502,
+            "ci95": [
+              0.4583,
+              0.5417
+            ]
+          }
+        },
+        "entity": {
+          "recall_disinformation": {
+            "n": 23,
+            "mean": 0.3043,
+            "ci95": [
+              0.1304,
+              0.4793
+            ]
+          }
+        },
+        "formulation": {
+          "recall_disinformation": {
+            "n": 30,
+            "mean": 0.4333,
+            "ci95": [
+              0.2667,
+              0.6
+            ]
+          }
+        }
+      },
+      "main/test": {
+        "all": {
+          "accuracy": {
+            "n": 600,
+            "mean": 0.5133,
+            "ci95": [
+              0.4717,
+              0.5517
+            ]
+          },
+          "precision_disinformation": {
+            "n": 600,
+            "mean": 0.5197,
+            "ci95": [
+              0.4744,
+              0.5635
+            ]
+          },
+          "recall_disinformation": {
+            "n": 600,
+            "mean": 0.79,
+            "ci95": [
+              0.7404,
+              0.8351
+            ]
+          },
+          "f1_disinformation": {
+            "n": 600,
+            "mean": 0.627,
+            "ci95": [
+              0.5841,
+              0.6633
+            ]
+          },
+          "precision_inconclusive": {
+            "n": 600,
+            "mean": 0.5462,
+            "ci95": [
+              0.4586,
+              0.6331
+            ]
+          },
+          "recall_inconclusive": {
+            "n": 600,
+            "mean": 0.2367,
+            "ci95": [
+              0.1908,
+              0.2881
+            ]
+          },
+          "f1_inconclusive": {
+            "n": 600,
+            "mean": 0.3302,
+            "ci95": [
+              0.2735,
+              0.391
+            ]
+          },
+          "macro_f1": {
+            "n": 600,
+            "mean": 0.4786,
+            "ci95": [
+              0.4401,
+              0.518
+            ]
+          },
+          "off_label_rate": {
+            "n": 600,
+            "mean": 0.0233,
+            "ci95": [
+              0.0117,
+              0.0367
+            ]
+          }
+        },
+        "high": {
+          "recall_disinformation": {
+            "n": 100,
+            "mean": 0.79,
+            "ci95": [
+              0.71,
+              0.87
+            ]
+          }
+        },
+        "low": {
+          "recall_disinformation": {
+            "n": 100,
+            "mean": 0.75,
+            "ci95": [
+              0.66,
+              0.83
+            ]
+          }
+        },
+        "mid": {
+          "recall_disinformation": {
+            "n": 100,
+            "mean": 0.83,
+            "ci95": [
+              0.76,
+              0.9
+            ]
+          }
+        },
+        "long": {
+          "recall_disinformation": {
+            "n": 96,
+            "mean": 0.8854,
+            "ci95": [
+              0.8229,
+              0.9375
+            ]
+          }
+        },
+        "medium": {
+          "recall_disinformation": {
+            "n": 103,
+            "mean": 0.7961,
+            "ci95": [
+              0.7087,
+              0.8641
+            ]
+          }
+        },
+        "short": {
+          "recall_disinformation": {
+            "n": 101,
+            "mean": 0.6931,
+            "ci95": [
+              0.604,
+              0.7822
+            ]
+          }
+        },
+        "entity": {
+          "recall_disinformation": {
+            "n": 125,
+            "mean": 0.776,
+            "ci95": [
+              0.704,
+              0.848
+            ]
+          }
+        },
+        "formulation": {
+          "recall_disinformation": {
+            "n": 175,
+            "mean": 0.8,
+            "ci95": [
+              0.7371,
+              0.8571
+            ]
+          }
+        }
+      }
+    },
+    "title_dense_cross": {
+      "article/test": {
+        "all": {
+          "accuracy": {
+            "n": 504,
+            "mean": 0.3234,
+            "ci95": [
+              0.2857,
+              0.3592
+            ]
+          },
+          "precision_disinformation": {
+            "n": 504,
+            "mean": 0.6875,
+            "ci95": [
+              0.5938,
+              0.7767
+            ]
+          },
+          "recall_disinformation": {
+            "n": 504,
+            "mean": 0.2619,
+            "ci95": [
+              0.2097,
+              0.3117
+            ]
+          },
+          "f1_disinformation": {
+            "n": 504,
+            "mean": 0.3793,
+            "ci95": [
+              0.3143,
+              0.4379
+            ]
+          },
+          "precision_fact": {
+            "n": 504,
+            "mean": 0.7185,
+            "ci95": [
+              0.6428,
+              0.7868
+            ]
+          },
+          "recall_fact": {
+            "n": 504,
+            "mean": 0.3849,
+            "ci95": [
+              0.3236,
+              0.4413
+            ]
+          },
+          "f1_fact": {
+            "n": 504,
+            "mean": 0.5013,
+            "ci95": [
+              0.4402,
+              0.5556
+            ]
+          },
+          "macro_f1": {
+            "n": 504,
+            "mean": 0.4403,
+            "ci95": [
+              0.3944,
+              0.4826
+            ]
+          },
+          "off_label_rate": {
+            "n": 504,
+            "mean": 0.5417,
+            "ci95": [
+              0.502,
+              0.5813
+            ]
+          }
+        },
+        "entity": {
+          "recall_disinformation": {
+            "n": 23,
+            "mean": 0.3913,
+            "ci95": [
+              0.1739,
+              0.6087
+            ]
+          }
+        },
+        "formulation": {
+          "recall_disinformation": {
+            "n": 30,
+            "mean": 0.4,
+            "ci95": [
+              0.2333,
+              0.5667
+            ]
+          }
+        }
+      },
+      "main/test": {
+        "all": {
+          "accuracy": {
+            "n": 600,
+            "mean": 0.5533,
+            "ci95": [
+              0.515,
+              0.595
+            ]
+          },
+          "precision_disinformation": {
+            "n": 600,
+            "mean": 0.5457,
+            "ci95": [
+              0.4977,
+              0.5907
+            ]
+          },
+          "recall_disinformation": {
+            "n": 600,
+            "mean": 0.7967,
+            "ci95": [
+              0.7515,
+              0.8441
+            ]
+          },
+          "f1_disinformation": {
+            "n": 600,
+            "mean": 0.6477,
+            "ci95": [
+              0.6083,
+              0.6885
+            ]
+          },
+          "precision_inconclusive": {
+            "n": 600,
+            "mean": 0.62,
+            "ci95": [
+              0.5411,
+              0.7014
+            ]
+          },
+          "recall_inconclusive": {
+            "n": 600,
+            "mean": 0.31,
+            "ci95": [
+              0.2557,
+              0.3624
+            ]
+          },
+          "f1_inconclusive": {
+            "n": 600,
+            "mean": 0.4133,
+            "ci95": [
+              0.3529,
+              0.4681
+            ]
+          },
+          "macro_f1": {
+            "n": 600,
+            "mean": 0.5305,
+            "ci95": [
+              0.4903,
+              0.571
+            ]
+          },
+          "off_label_rate": {
+            "n": 600,
+            "mean": 0.02,
+            "ci95": [
+              0.01,
+              0.0317
+            ]
+          }
+        },
+        "high": {
+          "recall_disinformation": {
+            "n": 100,
+            "mean": 0.83,
+            "ci95": [
+              0.75,
+              0.9
+            ]
+          }
+        },
+        "low": {
+          "recall_disinformation": {
+            "n": 100,
+            "mean": 0.78,
+            "ci95": [
+              0.69,
+              0.85
+            ]
+          }
+        },
+        "mid": {
+          "recall_disinformation": {
+            "n": 100,
+            "mean": 0.78,
+            "ci95": [
+              0.69,
+              0.86
+            ]
+          }
+        },
+        "long": {
+          "recall_disinformation": {
+            "n": 96,
+            "mean": 0.8646,
+            "ci95": [
+              0.7917,
+              0.9273
+            ]
+          }
+        },
+        "medium": {
+          "recall_disinformation": {
+            "n": 103,
+            "mean": 0.8155,
+            "ci95": [
+              0.7379,
+              0.8837
+            ]
+          }
+        },
+        "short": {
+          "recall_disinformation": {
+            "n": 101,
+            "mean": 0.7129,
+            "ci95": [
+              0.6337,
+              0.802
+            ]
+          }
+        },
+        "entity": {
+          "recall_disinformation": {
+            "n": 125,
+            "mean": 0.8,
+            "ci95": [
+              0.728,
+              0.872
+            ]
+          }
+        },
+        "formulation": {
+          "recall_disinformation": {
+            "n": 175,
+            "mean": 0.7943,
+            "ci95": [
+              0.7314,
+              0.8514
+            ]
+          }
+        }
+      }
+    },
+    "title_dense_late": {
+      "article/test": {
+        "all": {
+          "accuracy": {
+            "n": 504,
+            "mean": 0.3611,
+            "ci95": [
+              0.3194,
+              0.4028
+            ]
+          },
+          "precision_disinformation": {
+            "n": 504,
+            "mean": 0.6857,
+            "ci95": [
+              0.5979,
+              0.7707
+            ]
+          },
+          "recall_disinformation": {
+            "n": 504,
+            "mean": 0.2857,
+            "ci95": [
+              0.2329,
+              0.3399
+            ]
+          },
+          "f1_disinformation": {
+            "n": 504,
+            "mean": 0.4034,
+            "ci95": [
+              0.3392,
+              0.464
+            ]
+          },
+          "precision_fact": {
+            "n": 504,
+            "mean": 0.6707,
+            "ci95": [
+              0.6012,
+              0.7353
+            ]
+          },
+          "recall_fact": {
+            "n": 504,
+            "mean": 0.4365,
+            "ci95": [
+              0.3804,
+              0.494
+            ]
+          },
+          "f1_fact": {
+            "n": 504,
+            "mean": 0.5288,
+            "ci95": [
+              0.4715,
+              0.5808
+            ]
+          },
+          "macro_f1": {
+            "n": 504,
+            "mean": 0.4661,
+            "ci95": [
+              0.4176,
+              0.5122
+            ]
+          },
+          "off_label_rate": {
+            "n": 504,
+            "mean": 0.4663,
+            "ci95": [
+              0.4226,
+              0.5079
+            ]
+          }
+        },
+        "entity": {
+          "recall_disinformation": {
+            "n": 23,
+            "mean": 0.3478,
+            "ci95": [
+              0.1739,
+              0.5652
+            ]
+          }
+        },
+        "formulation": {
+          "recall_disinformation": {
+            "n": 30,
+            "mean": 0.5667,
+            "ci95": [
+              0.4,
+              0.7333
+            ]
+          }
+        }
+      },
+      "main/test": {
+        "all": {
+          "accuracy": {
+            "n": 600,
+            "mean": 0.5333,
+            "ci95": [
+              0.4933,
+              0.5717
+            ]
+          },
+          "precision_disinformation": {
+            "n": 600,
+            "mean": 0.5288,
+            "ci95": [
+              0.4837,
+              0.5729
+            ]
+          },
+          "recall_disinformation": {
+            "n": 600,
+            "mean": 0.8567,
+            "ci95": [
+              0.8178,
+              0.8955
+            ]
+          },
+          "f1_disinformation": {
+            "n": 600,
+            "mean": 0.6539,
+            "ci95": [
+              0.6133,
+              0.691
+            ]
+          },
+          "precision_inconclusive": {
+            "n": 600,
+            "mean": 0.6238,
+            "ci95": [
+              0.5252,
+              0.717
+            ]
+          },
+          "recall_inconclusive": {
+            "n": 600,
+            "mean": 0.21,
+            "ci95": [
+              0.1649,
+              0.2577
+            ]
+          },
+          "f1_inconclusive": {
+            "n": 600,
+            "mean": 0.3142,
+            "ci95": [
+              0.2531,
+              0.3732
+            ]
+          },
+          "macro_f1": {
+            "n": 600,
+            "mean": 0.4841,
+            "ci95": [
+              0.4442,
+              0.5223
+            ]
+          },
+          "off_label_rate": {
+            "n": 600,
+            "mean": 0.0217,
+            "ci95": [
+              0.0117,
+              0.0333
+            ]
+          }
+        },
+        "high": {
+          "recall_disinformation": {
+            "n": 100,
+            "mean": 0.89,
+            "ci95": [
+              0.82,
+              0.9402
+            ]
+          }
+        },
+        "low": {
+          "recall_disinformation": {
+            "n": 100,
+            "mean": 0.83,
+            "ci95": [
+              0.75,
+              0.9
+            ]
+          }
+        },
+        "mid": {
+          "recall_disinformation": {
+            "n": 100,
+            "mean": 0.85,
+            "ci95": [
+              0.77,
+              0.92
+            ]
+          }
+        },
+        "long": {
+          "recall_disinformation": {
+            "n": 96,
+            "mean": 0.9583,
+            "ci95": [
+              0.9062,
+              0.9896
+            ]
+          }
+        },
+        "medium": {
+          "recall_disinformation": {
+            "n": 103,
+            "mean": 0.8738,
+            "ci95": [
+              0.8058,
+              0.932
+            ]
+          }
+        },
+        "short": {
+          "recall_disinformation": {
+            "n": 101,
+            "mean": 0.7426,
+            "ci95": [
+              0.6535,
+              0.8218
+            ]
+          }
+        },
+        "entity": {
+          "recall_disinformation": {
+            "n": 125,
+            "mean": 0.816,
+            "ci95": [
+              0.744,
+              0.888
+            ]
+          }
+        },
+        "formulation": {
+          "recall_disinformation": {
+            "n": 175,
+            "mean": 0.8857,
+            "ci95": [
+              0.8343,
+              0.9314
+            ]
+          }
+        }
+      }
+    },
+    "title_late_none": {
+      "article/test": {
+        "all": {
+          "accuracy": {
+            "n": 504,
+            "mean": 0.3631,
+            "ci95": [
+              0.3234,
+              0.4087
+            ]
+          },
+          "precision_disinformation": {
+            "n": 504,
+            "mean": 0.7075,
+            "ci95": [
+              0.6239,
+              0.79
+            ]
+          },
+          "recall_disinformation": {
+            "n": 504,
+            "mean": 0.2976,
+            "ci95": [
+              0.2409,
+              0.3537
+            ]
+          },
+          "f1_disinformation": {
+            "n": 504,
+            "mean": 0.419,
+            "ci95": [
+              0.3522,
+              0.4806
+            ]
+          },
+          "precision_fact": {
+            "n": 504,
+            "mean": 0.6879,
+            "ci95": [
+              0.6144,
+              0.7582
+            ]
+          },
+          "recall_fact": {
+            "n": 504,
+            "mean": 0.4286,
+            "ci95": [
+              0.3728,
+              0.4882
+            ]
+          },
+          "f1_fact": {
+            "n": 504,
+            "mean": 0.5281,
+            "ci95": [
+              0.4706,
+              0.5847
+            ]
+          },
+          "macro_f1": {
+            "n": 504,
+            "mean": 0.4736,
+            "ci95": [
+              0.4285,
+              0.518
+            ]
+          },
+          "off_label_rate": {
+            "n": 504,
+            "mean": 0.4782,
+            "ci95": [
+              0.4345,
+              0.5198
+            ]
+          }
+        },
+        "entity": {
+          "recall_disinformation": {
+            "n": 23,
+            "mean": 0.3913,
+            "ci95": [
+              0.2174,
+              0.6087
+            ]
+          }
+        },
+        "formulation": {
+          "recall_disinformation": {
+            "n": 30,
+            "mean": 0.5333,
+            "ci95": [
+              0.3333,
+              0.7
+            ]
+          }
+        }
+      },
+      "main/test": {
+        "all": {
+          "accuracy": {
+            "n": 600,
+            "mean": 0.485,
+            "ci95": [
+              0.445,
+              0.5233
+            ]
+          },
+          "precision_disinformation": {
+            "n": 600,
+            "mean": 0.5122,
+            "ci95": [
+              0.4643,
+              0.5597
+            ]
+          },
+          "recall_disinformation": {
+            "n": 600,
+            "mean": 0.7,
+            "ci95": [
+              0.648,
+              0.7492
+            ]
+          },
+          "f1_disinformation": {
+            "n": 600,
+            "mean": 0.5915,
+            "ci95": [
+              0.5499,
+              0.6317
+            ]
+          },
+          "precision_inconclusive": {
+            "n": 600,
+            "mean": 0.526,
+            "ci95": [
+              0.4497,
+              0.6012
+            ]
+          },
+          "recall_inconclusive": {
+            "n": 600,
+            "mean": 0.27,
+            "ci95": [
+              0.2226,
+              0.3201
+            ]
+          },
+          "f1_inconclusive": {
+            "n": 600,
+            "mean": 0.3568,
+            "ci95": [
+              0.3007,
+              0.4111
+            ]
+          },
+          "macro_f1": {
+            "n": 600,
+            "mean": 0.4742,
+            "ci95": [
+              0.4364,
+              0.5113
+            ]
+          },
+          "off_label_rate": {
+            "n": 600,
+            "mean": 0.06,
+            "ci95": [
+              0.0433,
+              0.08
+            ]
+          }
+        },
+        "high": {
+          "recall_disinformation": {
+            "n": 100,
+            "mean": 0.7,
+            "ci95": [
+              0.61,
+              0.79
+            ]
+          }
+        },
+        "low": {
+          "recall_disinformation": {
+            "n": 100,
+            "mean": 0.63,
+            "ci95": [
+              0.53,
+              0.72
+            ]
+          }
+        },
+        "mid": {
+          "recall_disinformation": {
+            "n": 100,
+            "mean": 0.77,
+            "ci95": [
+              0.69,
+              0.85
+            ]
+          }
+        },
+        "long": {
+          "recall_disinformation": {
+            "n": 96,
+            "mean": 0.7292,
+            "ci95": [
+              0.6458,
+              0.8125
+            ]
+          }
+        },
+        "medium": {
+          "recall_disinformation": {
+            "n": 103,
+            "mean": 0.6796,
+            "ci95": [
+              0.5825,
+              0.767
+            ]
+          }
+        },
+        "short": {
+          "recall_disinformation": {
+            "n": 101,
+            "mean": 0.6931,
+            "ci95": [
+              0.5941,
+              0.7822
+            ]
+          }
+        },
+        "entity": {
+          "recall_disinformation": {
+            "n": 125,
+            "mean": 0.688,
+            "ci95": [
+              0.608,
+              0.768
+            ]
+          }
+        },
+        "formulation": {
+          "recall_disinformation": {
+            "n": 175,
+            "mean": 0.7086,
+            "ci95": [
+              0.64,
+              0.7714
+            ]
+          }
+        }
+      }
+    }
+  },
+  "paired_vs_first": {
+    "title_bm25_cross - title_bm25_none": {
+      "article/test": {
+        "all": {
+          "accuracy": {
+            "n": 504,
+            "mean": -0.006,
+            "ci95": [
+              -0.0456,
+              0.0358
+            ]
+          },
+          "precision_disinformation": {
+            "n": 504,
+            "mean": -0.057,
+            "ci95": [
+              -0.1514,
+              0.0361
+            ]
+          },
+          "recall_disinformation": {
+            "n": 504,
+            "mean": -0.0317,
+            "ci95": [
+              -0.0833,
+              0.027
+            ]
+          },
+          "f1_disinformation": {
+            "n": 504,
+            "mean": -0.0423,
+            "ci95": [
+              -0.1043,
+              0.0284
+            ]
+          },
+          "precision_fact": {
+            "n": 504,
+            "mean": -0.0189,
+            "ci95": [
+              -0.0837,
+              0.0495
+            ]
+          },
+          "recall_fact": {
+            "n": 504,
+            "mean": 0.0198,
+            "ci95": [
+              -0.0363,
+              0.0757
+            ]
+          },
+          "f1_fact": {
+            "n": 504,
+            "mean": 0.0112,
+            "ci95": [
+              -0.0435,
+              0.0688
+            ]
+          },
+          "macro_f1": {
+            "n": 504,
+            "mean": -0.0156,
+            "ci95": [
+              -0.0615,
+              0.0362
+            ]
+          },
+          "off_label_rate": {
+            "n": 504,
+            "mean": -0.0139,
+            "ci95": [
+              -0.0575,
+              0.0298
+            ]
+          }
+        }
+      },
+      "main/test": {
+        "all": {
+          "accuracy": {
+            "n": 600,
+            "mean": -0.025,
+            "ci95": [
+              -0.0667,
+              0.015
+            ]
+          },
+          "precision_disinformation": {
+            "n": 600,
+            "mean": -0.0118,
+            "ci95": [
+              -0.0447,
+              0.0191
+            ]
+          },
+          "recall_disinformation": {
+            "n": 600,
+            "mean": -0.0533,
+            "ci95": [
+              -0.1104,
+              0.0033
+            ]
+          },
+          "f1_disinformation": {
+            "n": 600,
+            "mean": -0.0273,
+            "ci95": [
+              -0.0663,
+              0.0091
+            ]
+          },
+          "precision_inconclusive": {
+            "n": 600,
+            "mean": -0.0239,
+            "ci95": [
+              -0.0926,
+              0.0417
+            ]
+          },
+          "recall_inconclusive": {
+            "n": 600,
+            "mean": 0.0033,
+            "ci95": [
+              -0.0569,
+              0.0581
+            ]
+          },
+          "f1_inconclusive": {
+            "n": 600,
+            "mean": -0.004,
+            "ci95": [
+              -0.0639,
+              0.0525
+            ]
+          },
+          "macro_f1": {
+            "n": 600,
+            "mean": -0.0157,
+            "ci95": [
+              -0.0593,
+              0.0253
+            ]
+          },
+          "off_label_rate": {
+            "n": 600,
+            "mean": 0.02,
+            "ci95": [
+              0.0017,
+              0.0383
+            ]
+          }
+        }
+      }
+    },
+    "title_bm25_late - title_bm25_none": {
+      "article/test": {
+        "all": {
+          "accuracy": {
+            "n": 504,
+            "mean": 0.0198,
+            "ci95": [
+              -0.0199,
+              0.0595
+            ]
+          },
+          "precision_disinformation": {
+            "n": 504,
+            "mean": -0.0519,
+            "ci95": [
+              -0.1292,
+              0.0254
+            ]
+          },
+          "recall_disinformation": {
+            "n": 504,
+            "mean": 0.0159,
+            "ci95": [
+              -0.0389,
+              0.0735
+            ]
+          },
+          "f1_disinformation": {
+            "n": 504,
+            "mean": 0.008,
+            "ci95": [
+              -0.0559,
+              0.0752
+            ]
+          },
+          "precision_fact": {
+            "n": 504,
+            "mean": -0.0477,
+            "ci95": [
+              -0.1179,
+              0.0183
+            ]
+          },
+          "recall_fact": {
+            "n": 504,
+            "mean": 0.0238,
+            "ci95": [
+              -0.0367,
+              0.0799
+            ]
+          },
+          "f1_fact": {
+            "n": 504,
+            "mean": 0.006,
+            "ci95": [
+              -0.0526,
+              0.0599
+            ]
+          },
+          "macro_f1": {
+            "n": 504,
+            "mean": 0.007,
+            "ci95": [
+              -0.0408,
+              0.0508
+            ]
+          },
+          "off_label_rate": {
+            "n": 504,
+            "mean": -0.0635,
+            "ci95": [
+              -0.1052,
+              -0.0258
+            ]
+          }
+        }
+      },
+      "main/test": {
+        "all": {
+          "accuracy": {
+            "n": 600,
+            "mean": -0.06,
+            "ci95": [
+              -0.1,
+              -0.0183
+            ]
+          },
+          "precision_disinformation": {
+            "n": 600,
+            "mean": -0.034,
+            "ci95": [
+              -0.0648,
+              -0.0033
+            ]
+          },
+          "recall_disinformation": {
+            "n": 600,
+            "mean": -0.0533,
+            "ci95": [
+              -0.109,
+              0.0067
+            ]
+          },
+          "f1_disinformation": {
+            "n": 600,
+            "mean": -0.0417,
+            "ci95": [
+              -0.0758,
+              -0.0053
+            ]
+          },
+          "precision_inconclusive": {
+            "n": 600,
+            "mean": -0.0824,
+            "ci95": [
+              -0.1499,
+              -0.0124
+            ]
+          },
+          "recall_inconclusive": {
+            "n": 600,
+            "mean": -0.0667,
+            "ci95": [
+              -0.1243,
+              -0.0072
+            ]
+          },
+          "f1_inconclusive": {
+            "n": 600,
+            "mean": -0.076,
+            "ci95": [
+              -0.1382,
+              -0.0152
+            ]
+          },
+          "macro_f1": {
+            "n": 600,
+            "mean": -0.0588,
+            "ci95": [
+              -0.1007,
+              -0.0154
+            ]
+          },
+          "off_label_rate": {
+            "n": 600,
+            "mean": 0.025,
+            "ci95": [
+              0.0083,
+              0.0417
+            ]
+          }
+        }
+      }
+    },
+    "title_dense_none - title_bm25_none": {
+      "article/test": {
+        "all": {
+          "accuracy": {
+            "n": 504,
+            "mean": 0.006,
+            "ci95": [
+              -0.0357,
+              0.0456
+            ]
+          },
+          "precision_disinformation": {
+            "n": 504,
+            "mean": -0.0373,
+            "ci95": [
+              -0.1229,
+              0.0453
+            ]
+          },
+          "recall_disinformation": {
+            "n": 504,
+            "mean": 0.0,
+            "ci95": [
+              -0.0573,
+              0.0535
+            ]
+          },
+          "f1_disinformation": {
+            "n": 504,
+            "mean": -0.0056,
+            "ci95": [
+              -0.0737,
+              0.0565
+            ]
+          },
+          "precision_fact": {
+            "n": 504,
+            "mean": -0.05,
+            "ci95": [
+              -0.1268,
+              0.0229
+            ]
+          },
+          "recall_fact": {
+            "n": 504,
+            "mean": 0.0119,
+            "ci95": [
+              -0.0465,
+              0.0703
+            ]
+          },
+          "f1_fact": {
+            "n": 504,
+            "mean": -0.0038,
+            "ci95": [
+              -0.0633,
+              0.0581
+            ]
+          },
+          "macro_f1": {
+            "n": 504,
+            "mean": -0.0047,
+            "ci95": [
+              -0.0547,
+              0.0417
+            ]
+          },
+          "off_label_rate": {
+            "n": 504,
+            "mean": -0.0397,
+            "ci95": [
+              -0.0794,
+              0.004
+            ]
+          }
+        }
+      },
+      "main/test": {
+        "all": {
+          "accuracy": {
+            "n": 600,
+            "mean": -0.0317,
+            "ci95": [
+              -0.075,
+              0.0133
+            ]
+          },
+          "precision_disinformation": {
+            "n": 600,
+            "mean": -0.0228,
+            "ci95": [
+              -0.0531,
+              0.0092
+            ]
+          },
+          "recall_disinformation": {
+            "n": 600,
+            "mean": 0.0467,
+            "ci95": [
+              -0.0095,
+              0.1065
+            ]
+          },
+          "f1_disinformation": {
+            "n": 600,
+            "mean": -0.0003,
+            "ci95": [
+              -0.0384,
+              0.0399
+            ]
+          },
+          "precision_inconclusive": {
+            "n": 600,
+            "mean": -0.0515,
+            "ci95": [
+              -0.1311,
+              0.0365
+            ]
+          },
+          "recall_inconclusive": {
+            "n": 600,
+            "mean": -0.11,
+            "ci95": [
+              -0.1695,
+              -0.0521
+            ]
+          },
+          "f1_inconclusive": {
+            "n": 600,
+            "mean": -0.1086,
+            "ci95": [
+              -0.1764,
+              -0.0421
+            ]
+          },
+          "macro_f1": {
+            "n": 600,
+            "mean": -0.0544,
+            "ci95": [
+              -0.101,
+              -0.0069
+            ]
+          },
+          "off_label_rate": {
+            "n": 600,
+            "mean": -0.0017,
+            "ci95": [
+              -0.0167,
+              0.015
+            ]
+          }
+        }
+      }
+    },
+    "title_dense_cross - title_bm25_none": {
+      "article/test": {
+        "all": {
+          "accuracy": {
+            "n": 504,
+            "mean": -0.006,
+            "ci95": [
+              -0.0456,
+              0.0337
+            ]
+          },
+          "precision_disinformation": {
+            "n": 504,
+            "mean": -0.0437,
+            "ci95": [
+              -0.1265,
+              0.0446
+            ]
+          },
+          "recall_disinformation": {
+            "n": 504,
+            "mean": -0.0079,
+            "ci95": [
+              -0.0654,
+              0.0464
+            ]
+          },
+          "f1_disinformation": {
+            "n": 504,
+            "mean": -0.0149,
+            "ci95": [
+              -0.0838,
+              0.0486
+            ]
+          },
+          "precision_fact": {
+            "n": 504,
+            "mean": 0.0084,
+            "ci95": [
+              -0.0632,
+              0.0852
+            ]
+          },
+          "recall_fact": {
+            "n": 504,
+            "mean": -0.004,
+            "ci95": [
+              -0.052,
+              0.0515
+            ]
+          },
+          "f1_fact": {
+            "n": 504,
+            "mean": -0.0013,
+            "ci95": [
+              -0.0492,
+              0.056
+            ]
+          },
+          "macro_f1": {
+            "n": 504,
+            "mean": -0.0081,
+            "ci95": [
+              -0.0549,
+              0.0368
+            ]
+          },
+          "off_label_rate": {
+            "n": 504,
+            "mean": 0.0,
+            "ci95": [
+              -0.0437,
+              0.0397
+            ]
+          }
+        }
+      },
+      "main/test": {
+        "all": {
+          "accuracy": {
+            "n": 600,
+            "mean": 0.0083,
+            "ci95": [
+              -0.0333,
+              0.0484
+            ]
+          },
+          "precision_disinformation": {
+            "n": 600,
+            "mean": 0.0031,
+            "ci95": [
+              -0.0262,
+              0.0337
+            ]
+          },
+          "recall_disinformation": {
+            "n": 600,
+            "mean": 0.0533,
+            "ci95": [
+              -0.0067,
+              0.1097
+            ]
+          },
+          "f1_disinformation": {
+            "n": 600,
+            "mean": 0.0204,
+            "ci95": [
+              -0.0136,
+              0.0564
+            ]
+          },
+          "precision_inconclusive": {
+            "n": 600,
+            "mean": 0.0223,
+            "ci95": [
+              -0.0538,
+              0.097
+            ]
+          },
+          "recall_inconclusive": {
+            "n": 600,
+            "mean": -0.0367,
+            "ci95": [
+              -0.0954,
+              0.0216
+            ]
+          },
+          "f1_inconclusive": {
+            "n": 600,
+            "mean": -0.0255,
+            "ci95": [
+              -0.0892,
+              0.0366
+            ]
+          },
+          "macro_f1": {
+            "n": 600,
+            "mean": -0.0025,
+            "ci95": [
+              -0.0479,
+              0.0411
+            ]
+          },
+          "off_label_rate": {
+            "n": 600,
+            "mean": -0.005,
+            "ci95": [
+              -0.02,
+              0.0117
+            ]
+          }
+        }
+      }
+    },
+    "title_dense_late - title_bm25_none": {
+      "article/test": {
+        "all": {
+          "accuracy": {
+            "n": 504,
+            "mean": 0.0317,
+            "ci95": [
+              -0.0079,
+              0.0714
+            ]
+          },
+          "precision_disinformation": {
+            "n": 504,
+            "mean": -0.0455,
+            "ci95": [
+              -0.1284,
+              0.0324
+            ]
+          },
+          "recall_disinformation": {
+            "n": 504,
+            "mean": 0.0159,
+            "ci95": [
+              -0.0364,
+              0.0664
+            ]
+          },
+          "f1_disinformation": {
+            "n": 504,
+            "mean": 0.0092,
+            "ci95": [
+              -0.0514,
+              0.0692
+            ]
+          },
+          "precision_fact": {
+            "n": 504,
+            "mean": -0.0394,
+            "ci95": [
+              -0.1064,
+              0.0323
+            ]
+          },
+          "recall_fact": {
+            "n": 504,
+            "mean": 0.0476,
+            "ci95": [
+              -0.0078,
+              0.1009
+            ]
+          },
+          "f1_fact": {
+            "n": 504,
+            "mean": 0.0263,
+            "ci95": [
+              -0.0277,
+              0.0807
+            ]
+          },
+          "macro_f1": {
+            "n": 504,
+            "mean": 0.0177,
+            "ci95": [
+              -0.0257,
+              0.0627
+            ]
+          },
+          "off_label_rate": {
+            "n": 504,
+            "mean": -0.0754,
+            "ci95": [
+              -0.1171,
+              -0.0357
+            ]
+          }
+        }
+      },
+      "main/test": {
+        "all": {
+          "accuracy": {
+            "n": 600,
+            "mean": -0.0117,
+            "ci95": [
+              -0.055,
+              0.03
+            ]
+          },
+          "precision_disinformation": {
+            "n": 600,
+            "mean": -0.0138,
+            "ci95": [
+              -0.0419,
+              0.0149
+            ]
+          },
+          "recall_disinformation": {
+            "n": 600,
+            "mean": 0.1133,
+            "ci95": [
+              0.0563,
+              0.169
+            ]
+          },
+          "f1_disinformation": {
+            "n": 600,
+            "mean": 0.0267,
+            "ci95": [
+              -0.0078,
+              0.0625
+            ]
+          },
+          "precision_inconclusive": {
+            "n": 600,
+            "mean": 0.0261,
+            "ci95": [
+              -0.0646,
+              0.1241
+            ]
+          },
+          "recall_inconclusive": {
+            "n": 600,
+            "mean": -0.1367,
+            "ci95": [
+              -0.1988,
+              -0.0772
+            ]
+          },
+          "f1_inconclusive": {
+            "n": 600,
+            "mean": -0.1246,
+            "ci95": [
+              -0.1995,
+              -0.0579
+            ]
+          },
+          "macro_f1": {
+            "n": 600,
+            "mean": -0.049,
+            "ci95": [
+              -0.0971,
+              -0.0058
+            ]
+          },
+          "off_label_rate": {
+            "n": 600,
+            "mean": -0.0033,
+            "ci95": [
+              -0.0167,
+              0.01
+            ]
+          }
+        }
+      }
+    },
+    "title_late_none - title_bm25_none": {
+      "article/test": {
+        "all": {
+          "accuracy": {
+            "n": 504,
+            "mean": 0.0337,
+            "ci95": [
+              -0.004,
+              0.0714
+            ]
+          },
+          "precision_disinformation": {
+            "n": 504,
+            "mean": -0.0236,
+            "ci95": [
+              -0.0975,
+              0.0405
+            ]
+          },
+          "recall_disinformation": {
+            "n": 504,
+            "mean": 0.0278,
+            "ci95": [
+              -0.0247,
+              0.0837
+            ]
+          },
+          "f1_disinformation": {
+            "n": 504,
+            "mean": 0.0248,
+            "ci95": [
+              -0.0366,
+              0.0884
+            ]
+          },
+          "precision_fact": {
+            "n": 504,
+            "mean": -0.0222,
+            "ci95": [
+              -0.0828,
+              0.0422
+            ]
+          },
+          "recall_fact": {
+            "n": 504,
+            "mean": 0.0397,
+            "ci95": [
+              -0.0111,
+              0.0927
+            ]
+          },
+          "f1_fact": {
+            "n": 504,
+            "mean": 0.0256,
+            "ci95": [
+              -0.0247,
+              0.0783
+            ]
+          },
+          "macro_f1": {
+            "n": 504,
+            "mean": 0.0252,
+            "ci95": [
+              -0.0175,
+              0.067
+            ]
+          },
+          "off_label_rate": {
+            "n": 504,
+            "mean": -0.0635,
+            "ci95": [
+              -0.1032,
+              -0.0218
+            ]
+          }
+        }
+      },
+      "main/test": {
+        "all": {
+          "accuracy": {
+            "n": 600,
+            "mean": -0.06,
+            "ci95": [
+              -0.1,
+              -0.0183
+            ]
+          },
+          "precision_disinformation": {
+            "n": 600,
+            "mean": -0.0304,
+            "ci95": [
+              -0.062,
+              0.0013
+            ]
+          },
+          "recall_disinformation": {
+            "n": 600,
+            "mean": -0.0433,
+            "ci95": [
+              -0.0963,
+              0.0132
+            ]
+          },
+          "f1_disinformation": {
+            "n": 600,
+            "mean": -0.0357,
+            "ci95": [
+              -0.0719,
+              -0.0019
+            ]
+          },
+          "precision_inconclusive": {
+            "n": 600,
+            "mean": -0.0717,
+            "ci95": [
+              -0.1471,
+              -0.0034
+            ]
+          },
+          "recall_inconclusive": {
+            "n": 600,
+            "mean": -0.0767,
+            "ci95": [
+              -0.1325,
+              -0.0139
+            ]
+          },
+          "f1_inconclusive": {
+            "n": 600,
+            "mean": -0.082,
+            "ci95": [
+              -0.1454,
+              -0.013
+            ]
+          },
+          "macro_f1": {
+            "n": 600,
+            "mean": -0.0589,
+            "ci95": [
+              -0.1047,
+              -0.0151
+            ]
+          },
+          "off_label_rate": {
+            "n": 600,
+            "mean": 0.035,
+            "ci95": [
+              0.0167,
+              0.0533
+            ]
+          }
+        }
+      }
+    }
+  },
+  "confusion": {
+    "title_bm25_none|article/test": {
+      "disinformation": {
+        "disinformation": 68,
+        "fact": 25
+      },
+      "fact": {
+        "disinformation": 40,
+        "fact": 98
+      },
+      "inconclusive": {
+        "disinformation": 144,
+        "fact": 129
+      }
+    },
+    "title_bm25_none|main/test": {
+      "disinformation": {
+        "disinformation": 223,
+        "inconclusive": 188
+      },
+      "fact": {
+        "disinformation": 7,
+        "inconclusive": 8
+      },
+      "inconclusive": {
+        "disinformation": 70,
+        "inconclusive": 104
+      }
+    },
+    "title_bm25_cross|article/test": {
+      "disinformation": {
+        "disinformation": 60,
+        "fact": 29
+      },
+      "fact": {
+        "disinformation": 46,
+        "fact": 103
+      },
+      "inconclusive": {
+        "disinformation": 146,
+        "fact": 120
+      }
+    },
+    "title_bm25_cross|main/test": {
+      "disinformation": {
+        "disinformation": 207,
+        "inconclusive": 183
+      },
+      "fact": {
+        "disinformation": 15,
+        "inconclusive": 12
+      },
+      "inconclusive": {
+        "disinformation": 78,
+        "inconclusive": 105
+      }
+    },
+    "title_bm25_late|article/test": {
+      "disinformation": {
+        "disinformation": 72,
+        "fact": 34
+      },
+      "fact": {
+        "disinformation": 53,
+        "fact": 104
+      },
+      "inconclusive": {
+        "disinformation": 127,
+        "fact": 114
+      }
+    },
+    "title_bm25_late|main/test": {
+      "disinformation": {
+        "disinformation": 207,
+        "inconclusive": 200
+      },
+      "fact": {
+        "disinformation": 14,
+        "inconclusive": 16
+      },
+      "inconclusive": {
+        "disinformation": 79,
+        "inconclusive": 84
+      }
+    },
+    "title_dense_none|article/test": {
+      "disinformation": {
+        "disinformation": 68,
+        "fact": 30
+      },
+      "fact": {
+        "disinformation": 52,
+        "fact": 101
+      },
+      "inconclusive": {
+        "disinformation": 132,
+        "fact": 121
+      }
+    },
+    "title_dense_none|main/test": {
+      "disinformation": {
+        "disinformation": 237,
+        "inconclusive": 219
+      },
+      "fact": {
+        "disinformation": 4,
+        "inconclusive": 10
+      },
+      "inconclusive": {
+        "disinformation": 59,
+        "inconclusive": 71
+      }
+    },
+    "title_dense_cross|article/test": {
+      "disinformation": {
+        "disinformation": 66,
+        "fact": 30
+      },
+      "fact": {
+        "disinformation": 38,
+        "fact": 97
+      },
+      "inconclusive": {
+        "disinformation": 148,
+        "fact": 125
+      }
+    },
+    "title_dense_cross|main/test": {
+      "disinformation": {
+        "disinformation": 239,
+        "inconclusive": 199
+      },
+      "fact": {
+        "disinformation": 4,
+        "inconclusive": 8
+      },
+      "inconclusive": {
+        "disinformation": 57,
+        "inconclusive": 93
+      }
+    },
+    "title_dense_late|article/test": {
+      "disinformation": {
+        "disinformation": 72,
+        "fact": 33
+      },
+      "fact": {
+        "disinformation": 54,
+        "fact": 110
+      },
+      "inconclusive": {
+        "disinformation": 126,
+        "fact": 109
+      }
+    },
+    "title_dense_late|main/test": {
+      "disinformation": {
+        "disinformation": 257,
+        "inconclusive": 229
+      },
+      "fact": {
+        "disinformation": 5,
+        "inconclusive": 8
+      },
+      "inconclusive": {
+        "disinformation": 38,
+        "inconclusive": 63
+      }
+    },
+    "title_late_none|article/test": {
+      "disinformation": {
+        "disinformation": 75,
+        "fact": 31
+      },
+      "fact": {
+        "disinformation": 49,
+        "fact": 108
+      },
+      "inconclusive": {
+        "disinformation": 128,
+        "fact": 113
+      }
+    },
+    "title_late_none|main/test": {
+      "disinformation": {
+        "disinformation": 210,
+        "inconclusive": 200
+      },
+      "fact": {
+        "disinformation": 17,
+        "inconclusive": 19
+      },
+      "inconclusive": {
+        "disinformation": 73,
+        "inconclusive": 81
+      }
+    }
+  },
+  "cost": {
+    "title_bm25_none": {
+      "mode": "?",
+      "k": null,
+      "prompt_tokens_mean": null,
+      "llm_s_per_query": null,
+      "gpu_peak_mem_gb": null,
+      "retrieval_ms_per_query": null
+    },
+    "title_bm25_cross": {
+      "mode": "?",
+      "k": null,
+      "prompt_tokens_mean": null,
+      "llm_s_per_query": null,
+      "gpu_peak_mem_gb": null,
+      "retrieval_ms_per_query": null
+    },
+    "title_bm25_late": {
+      "mode": "?",
+      "k": null,
+      "prompt_tokens_mean": null,
+      "llm_s_per_query": null,
+      "gpu_peak_mem_gb": null,
+      "retrieval_ms_per_query": null
+    },
+    "title_dense_none": {
+      "mode": "?",
+      "k": null,
+      "prompt_tokens_mean": null,
+      "llm_s_per_query": null,
+      "gpu_peak_mem_gb": null,
+      "retrieval_ms_per_query": null
+    },
+    "title_dense_cross": {
+      "mode": "?",
+      "k": null,
+      "prompt_tokens_mean": null,
+      "llm_s_per_query": null,
+      "gpu_peak_mem_gb": null,
+      "retrieval_ms_per_query": null
+    },
+    "title_dense_late": {
+      "mode": "?",
+      "k": null,
+      "prompt_tokens_mean": null,
+      "llm_s_per_query": null,
+      "gpu_peak_mem_gb": null,
+      "retrieval_ms_per_query": null
+    },
+    "title_late_none": {
+      "mode": "?",
+      "k": null,
+      "prompt_tokens_mean": null,
+      "llm_s_per_query": null,
+      "gpu_peak_mem_gb": null,
+      "retrieval_ms_per_query": null
+    }
+  }
+}

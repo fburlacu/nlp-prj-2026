@@ -1,0 +1,75 @@
+{
+  "model": "meta-llama/Llama-3.1-8B-Instruct",
+  "device": "cuda",
+  "dtype": "torch.float16",
+  "created_utc": "2026-10-20T17:31:05+00:00",
+  "command": "detect.py --split dev --output preds/dev/noretrieval.csv",
+  "mode": "no_retrieval",
+  "params": {
+    "k": 0,
+    "batch_size": 8,
+    "max_passage_words": 250,
+    "answers": {
+      "false": "disinformation",
+      "true": "fact",
+      "unknown": "inconclusive"
+    },
+    "answer_tokens": {
+      "false": [
+        "false",
+        "False",
+        "FALSE"
+      ],
+      "true": [
+        "true",
+        "True",
+        "TRUE"
+      ],
+      "unknown": [
+        "Unknown",
+        "unknown",
+        "UNKNOWN"
+      ]
+    },
+    "scoring": "next-token probability mass per answer word, renormalised; argmax"
+  },
+  "prompt": {
+    "system": "You are a fact-checking assistant. You judge whether a claim is disinformation, using only the evidence you are given. Answer with exactly one word: false, true or unknown.",
+    "user": "Claim: {claim}\n\nNo evidence is available. Based on your own knowledge, is the claim:\nfalse - the claim is false or a known disinformation narrative\ntrue - the claim is true\nunknown - you cannot decide\n\nAnswer with one word (false, true or unknown).",
+    "passage_types": {
+      "eeas_claim": "EUvsDisinfo database: documented disinformation claim",
+      "eeas_disproof": "EUvsDisinfo database: analysts' refutation",
+      "article": "News article"
+    }
+  },
+  "filters": {
+    "split": "dev",
+    "sets": [
+      "main",
+      "article"
+    ],
+    "limit": null
+  },
+  "inputs": {
+    "run": null,
+    "run_sha256": null,
+    "queries": "/home/s2872927/nlp-prj-2026/data/queries.csv",
+    "queries_sha256": "adcd0064fdcfb99f10fd9bb1292df34ec4a71c789dbc7abb0cb29a5bcfb2d08e"
+  },
+  "counts": {
+    "n_predictions": 192,
+    "pred_distribution": {
+      "inconclusive": 157,
+      "fact": 21,
+      "disinformation": 14
+    }
+  },
+  "timing_this_session": {
+    "model_load_s": 13.7,
+    "n_queries": 192,
+    "llm_s_per_query": 0.0385,
+    "prompt_tokens_mean": 141.1,
+    "gpu_peak_mem_gb": 15.28
+  },
+  "prompt_tokens_mean_all": 141.1
+}
