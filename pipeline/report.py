@@ -33,6 +33,8 @@ HISTORICAL = {
 }
 PASSAGES_FOR_EVAL = ROOT / "results" / "dense" / "v2" / "reports" / "passages_for_eval.parquet"
 BASELINE = "title_bm25_none"
+# Dev checks outside the 12. Included only when that run is on disk.
+EXTRA = ("title_late_none", "title_bm25_late_k200", "title_dense_late_k200")
 
 
 def _runs(split):
@@ -48,8 +50,18 @@ def _runs(split):
             found.append((name, historical, None, None))
         else:
             missing.append(name)
+    for name in EXTRA:
+        folder = ROOT / "runs" / split / name
+        parquet = folder / f"{name}.parquet"
+        if parquet.exists():
+            found.append((name, parquet, folder / "passages.parquet", folder / "verdicts.csv"))
     order = {mode_name(*cell): i for i, cell in enumerate(cells())}
-    found.sort(key=lambda item: (item[0] != BASELINE, order[item[0]]))
+    extra_order = {name: i for i, name in enumerate(EXTRA)}
+    found.sort(key=lambda item: (
+        item[0] != BASELINE,
+        item[0] not in order,
+        order.get(item[0], extra_order.get(item[0], len(order))),
+    ))
     return found, missing
 
 
@@ -160,7 +172,6 @@ def report(split, query_set=None):
         "Retrieval is scored for every included system. Verdicts are scored only when",
         "`generator/generator.py` wrote them, so the prompt is the same for each system.",
         "A run with no rows for a query set is scored as a miss on that set.",
-        "The saved dev BM25 run searched the main set only.",
         "",
     ]
     body = "\n".join(header) + retrieval_md

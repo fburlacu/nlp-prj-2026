@@ -15,6 +15,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 QUERIES = ("title", "rewrite")
 RETRIEVERS = ("bm25", "dense")
+FIRST_STAGE = (*RETRIEVERS, "late")
 RERANKERS = ("none", "cross", "late")
 ALIASES = {"sparse": "bm25", "cross-encoder": "cross", "late-interaction": "late"}
 
@@ -26,8 +27,11 @@ def cells():
                 yield query, retriever, reranker
 
 
-def mode_name(query, retriever, reranker):
-    return f"{query}_{retriever}_{reranker}"
+def mode_name(query, retriever, reranker, k=100):
+    name = f"{query}_{retriever}_{reranker}"
+    if k != 100:
+        name += f"_k{k}"
+    return name
 
 
 def _reject_qwen(name):
@@ -50,8 +54,10 @@ def run_cell(args):
     from pipeline.store import write_run
 
     query = _canonical(args.query, QUERIES)
-    retriever = _canonical(args.retriever, RETRIEVERS)
+    retriever = _canonical(args.retriever, FIRST_STAGE)
     reranker = _canonical(args.reranker, RERANKERS)
+    if retriever == "late" and reranker == "late":
+        print("The first stage is already late interaction; the reranker scores that same model again.")
     if retriever == "dense" and args.reindex:
         from retrieval.dense import build_index, query_prompt_for
         model_name = "BAAI/bge-small-en-v1.5"
@@ -64,7 +70,7 @@ def run_cell(args):
 
     queries = load_queries(ROOT / "data" / "queries_v2.csv", args.split, args.set, args.limit)
     searches = search_strings(queries, query, ROOT / "runs" / "rewrite.csv")
-    print(f"{mode_name(query, retriever, reranker)}: {len(queries)} claims, {len(searches)} searches, k={args.k}")
+    print(f"{mode_name(query, retriever, reranker, args.k)}: {len(queries)} claims, {len(searches)} searches, k={args.k}")
     ranked, lookup = retrieve(
         retriever, searches, args.k,
         passages_path=ROOT / "data" / "passages_v2.parquet",
@@ -75,7 +81,7 @@ def run_cell(args):
     texts = dict(zip(lookup["passage_id"], lookup["text"]))
     ranked = rerank(ranked, claims, texts, reranker, device=args.device, batch_size=args.batch_size)
 
-    name = mode_name(query, retriever, reranker)
+    name = mode_name(query, retriever, reranker, args.k)
     directory = ROOT / "runs" / (args.split or "all") / name
     rerank_model = {"none": None, "cross": CROSS_MODEL, "late": LATE_MODEL}[reranker]
     config = {
@@ -90,6 +96,9 @@ def run_cell(args):
         "rewrite": str((ROOT / "runs" / "rewrite.csv").resolve()) if query == "rewrite" else None,
         "word_limit": 400,
         "note": (
+            "Late interaction searches every v2 passage in the claim's set and keeps the top k. "
+            "Each passage is clipped to 400 words. This is not one of the 12 systems."
+            if retriever == "late" else
             "The reranker scores the original claim against the first 400 words of each passage. "
             "Rewritten queries are fused into the first-stage list, and the title is one of those queries."
         ),
@@ -139,6 +148,11 @@ def list_cmd(_args):
         parquet = ROOT / "runs" / "dev" / name / f"{name}.parquet"
         mark = "written" if parquet.exists() else "missing"
         print(f"{name:<28} {mark}")
+    print("optional:")
+    for name in ("title_late_none", "title_bm25_late_k200", "title_dense_late_k200"):
+        parquet = ROOT / "runs" / "dev" / name / f"{name}.parquet"
+        mark = "written" if parquet.exists() else "missing"
+        print(f"{name:<28} {mark}")
 
 
 def parser():
@@ -153,9 +167,9 @@ def parser():
 
     run = sub.add_parser("run", parents=[parent], help="retrieve, optionally rerank, optionally judge")
     run.add_argument("--query", choices=[*QUERIES], default="title")
-    run.add_argument("--retriever", default="dense", help="bm25 or dense (sparse is accepted as bm25)")
+    run.add_argument("--retriever", default="dense", help="bm25, dense, or late. late searches the whole passage set and is not one of the 12")
     run.add_argument("--reranker", default="none", help="none, cross, or late")
-    run.add_argument("--k", type=int, default=100, help="passages kept from the first stage, and after reranking")
+    run.add_argument("--k", type=int, default=100, help="passages kept. k other than 100 is written to its own folder")
     run.add_argument("--k1", type=float, default=1.2)
     run.add_argument("--b", type=float, default=0.75)
     run.add_argument("--batch-size", type=int, default=16)

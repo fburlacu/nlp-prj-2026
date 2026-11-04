@@ -150,6 +150,72 @@ def _dense_lists(searches, index_dir, k, batch_size, device):
     return lists, meta
 
 
+def _late_lists(passages, searches, k, batch_size, device):
+    """Late interaction over every passage in the claim's set. Not a rerank of another list."""
+    from pipeline.rerank import LATE_MODEL, _as_scores, clip_words
+    from sentence_transformers import MultiVectorEncoder
+
+    model = MultiVectorEncoder(LATE_MODEL, device=device, trust_remote_code=True)
+    needed = set(searches["set"].astype(str))
+    by_set = {}
+    for name, idx in passages.groupby(passages["set"].astype(str)).indices.items():
+        if name not in needed:
+            continue
+        pos = np.asarray(idx)
+        texts = [clip_words(text, 400) for text in passages["text"].iloc[pos].tolist()]
+        print(f"Encoding {len(texts)} {name} passages with {LATE_MODEL}")
+        encoded = []
+        for start in range(0, len(texts), batch_size):
+            part = model.encode_document(
+                texts[start:start + batch_size], batch_size=batch_size,
+                show_progress_bar=False, convert_to_numpy=True,
+            )
+            encoded.extend(part)
+            print(f"  encoded {min(start + batch_size, len(texts))}/{len(texts)}", end="\r")
+        print()
+        by_set[name] = (pos, encoded, {int(global_i): local for local, global_i in enumerate(pos)})
+
+    row_of = {pid: i for i, pid in enumerate(passages["passage_id"])}
+    rows_of_doc = {}
+    for i, key in enumerate(passages["doc_key"].tolist()):
+        if key:
+            rows_of_doc.setdefault(key, []).append(i)
+    pid = passages["passage_id"].to_numpy()
+    lists = []
+    total = len(searches)
+    step = 256
+    for done, row in enumerate(searches.itertuples(index=False), 1):
+        packed = by_set.get(str(row.set))
+        if packed is None:
+            lists.append((row.query_id, []))
+            continue
+        pos, encoded, local_of = packed
+        query = model.encode_query(row.text, show_progress_bar=False)
+        parts = []
+        for start in range(0, len(encoded), step):
+            parts.append(_as_scores(model.similarity(query, encoded[start:start + step])))
+        scores = np.concatenate(parts) if parts else np.zeros(0, dtype=np.float32)
+        if len(scores) != len(encoded):
+            raise SystemExit(f"late search returned {len(scores)} scores for {len(encoded)} passages")
+        banned = [row_of[p] for p in str(row.exclude_passage_ids).split("|") if p in row_of]
+        banned += [i for key in str(row.exclude_doc_key).split("|") if key for i in rows_of_doc.get(key, [])]
+        for global_i in banned:
+            local = local_of.get(global_i)
+            if local is not None:
+                scores[local] = -np.inf
+        finite = np.flatnonzero(np.isfinite(scores))
+        if len(finite) == 0:
+            lists.append((row.query_id, []))
+        else:
+            keep = min(k, len(finite))
+            chosen = finite[np.argpartition(-scores[finite], keep - 1)[:keep]]
+            chosen = chosen[np.argsort(-scores[chosen], kind="stable")]
+            lists.append((row.query_id, [pid[pos[i]] for i in chosen]))
+        print(f"  searched {done}/{total}", end="\r")
+    print()
+    return lists
+
+
 def retrieve(retriever, searches, k, passages_path, index_dir, batch_size, device, k1=1.2, b=0.75):
     """Return (ranked frame, passage table with passage_id, doc_type, case_links, doc_key, text)."""
     if retriever == "bm25":
@@ -158,6 +224,10 @@ def retrieve(retriever, searches, k, passages_path, index_dir, batch_size, devic
         lookup = passages
     elif retriever == "dense":
         lists, lookup = _dense_lists(searches, index_dir, k, batch_size, device)
+    elif retriever == "late":
+        passages = load_bm25_passages(passages_path)
+        lists = _late_lists(passages, searches, k, batch_size, device)
+        lookup = passages
     else:
         raise SystemExit(f"unknown retriever {retriever}")
     rows = fuse(lists, k)

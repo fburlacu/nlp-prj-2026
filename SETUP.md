@@ -73,6 +73,16 @@ python main.py report --split dev
 
 `report` writes `results/comparison/<split>/comparison.md`. It scores every system that already has a run, with `title_bm25_none` as the baseline, and lists the systems that have not been run. The two finished title systems are included from `results/` until a new run replaces them.
 
+Three dev checks sit outside the 12. A `k` other than 100 is stored in its own folder, so it does not replace the run at `k=100`. `title_late_none` searches every v2 passage with late interaction. The other two ask the late reranker to reorder 200 passages instead of 100.
+
+```bash
+export CUDA_VISIBLE_DEVICES=0
+python main.py run --query title --retriever late --reranker none --split dev --retrieve-only
+python main.py run --query title --retriever bm25 --reranker late --k 200 --split dev --retrieve-only
+python main.py run --query title --retriever dense --reranker late --k 200 --split dev --retrieve-only
+python main.py report --split dev
+```
+
 `sparse` is accepted as `bm25`. `--retrieve-only` skips the verdict model, which is what you want while comparing rankings. Omit it to score the top 5 with Llama after retrieval. A run is written to `runs/dev/<query>_<retriever>_<reranker>/`. The printed `eval_retrieval.py` command is the report.
 
 The dense index is still `retrieval/indexes/dense_v2`. `--reindex` rebuilds it. Rewritten queries are cached in `runs/rewrite.csv`, so a second `rewrite` continues rather than starting over. `--questions` defaults to 10, matching the paper. `--limit 5` is a smoke test.
