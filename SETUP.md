@@ -38,7 +38,7 @@ generator/       verdict model for every retriever, including BM25
   bm25_verdicts.py  the older BM25 prompt, which shows passage type
 pipeline/        the 12 systems below
 analysis/        detection scorer (eval_detection.py) and the older combined scorer
-results/         finished outputs, kept out of the code folders
+results/         finished outputs, kept on disk and not committed
   bm25/retrieval/v1, v2    BM25 runs and retrieval reports
   bm25/detection/v1, v2    BM25 verdict predictions and detection reports
   dense/v1, v2             dense runs, verdicts, predictions, and reports
@@ -47,7 +47,7 @@ scripts/         the HPC batch script
 runs/            new 12-system outputs (gitignored)
 ```
 
-`results/` is the finished BM25 and dense work. New 12-system runs go to `runs/`, which is gitignored.
+`results/` is the finished BM25 and dense work. It stays on this machine and is not committed. New 12-system runs go to `runs/`, which is also gitignored.
 
 ## The 12 systems
 
@@ -95,7 +95,7 @@ retrieval/indexes/dense_v2/meta.parquet
 retrieval/indexes/dense_v2/config.json
 ```
 
-The next run in the same home directory loads those files. `--reindex` builds them again. Do not commit the index or `runs/`.
+The next run in the same home directory loads those files. `--reindex` builds them again. Do not commit the index, `runs/`, or `results/`.
 
 `generator/generator.py` is the verdict model. `data/claim_check.py` is the Qwen title filter and does not read the retrieval run. The verdict prompt still shows passage text only.
 
