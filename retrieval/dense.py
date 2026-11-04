@@ -245,7 +245,7 @@ def search(queries_path, index_dir, output, k, batch_size, device, split, limit,
         queries = queries[queries["split"] == split]
     passage_sets = set(meta["set"].astype(str)) - {""} if "set" in meta.columns else set()
     if passage_sets and "set" in queries.columns:
-        # Same scope as sparse_bm25/llm/detect.py: main and article. The extra
+        # Same scope as generator/bm25_verdicts.py: main and article. The extra
         # fact set has no passages in passages_v2.parquet and is not scored.
         kept = queries["set"].isin(passage_sets)
         skipped = sorted(set(queries.loc[~kept, "set"]))

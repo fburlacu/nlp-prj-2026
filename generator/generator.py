@@ -12,7 +12,7 @@ next-token probabilities, with no sampling.
 
 Usage (from the repo root):
   python main.py --retriever dense --limit 5
-  python generator/generator.py --retrieval retrieval/runs/dense.jsonl
+  python generator/generator.py --retrieval results/dense/v2/runs/dense_v2.jsonl
 """
 import argparse
 import json
@@ -221,9 +221,9 @@ def run(retrieval, output, cache, model=DEFAULT_MODEL, batch_size=1, max_passage
 
 def main():
     ap = argparse.ArgumentParser(description="RAG claim check over a retrieval run")
-    ap.add_argument("--retrieval", default=str(ROOT / "retrieval" / "runs" / "dense.jsonl"))
-    ap.add_argument("--output", default=str(ROOT / "generator" / "verdicts.csv"))
-    ap.add_argument("--cache", default=str(ROOT / "generator" / "verdict_cache.jsonl"))
+    ap.add_argument("--retrieval", default=str(ROOT / "results" / "dense" / "v2" / "runs" / "dense_v2.jsonl"))
+    ap.add_argument("--output", default=str(ROOT / "results" / "dense" / "v2" / "verdicts" / "verdicts.csv"))
+    ap.add_argument("--cache", default=str(ROOT / "results" / "dense" / "v2" / "verdicts" / "verdict_cache.jsonl"))
     ap.add_argument("--model", default=DEFAULT_MODEL,
                     help="Llama 3.1 Instruct; keep a different family from data/claim_check.py")
     ap.add_argument("--batch-size", type=int, default=1,

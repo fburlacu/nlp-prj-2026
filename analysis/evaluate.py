@@ -4,7 +4,8 @@ Usage (from the repo root):
   python analysis/evaluate.py
   python analysis/evaluate.py --retriever dense --split test
 
-Writes analysis/metrics_<retriever>.json with a "dev" and a "test" block.
+Writes results/dense/v1 or results/dense/v2/metrics_<retriever>.json
+with a "dev" and a "test" block.
 Pass --split to keep only one of them. Gold rules match data/DATA_PREP.md:
 a hit is an eeas_disproof whose case_links is in the query gold, or an article
 chunk whose doc_key is in gold_doc_keys. Any chunk of a gold document counts.
@@ -177,9 +178,17 @@ def main():
                     help="score one split; default writes both")
     ap.add_argument("--output", default=None)
     args = ap.parse_args()
-    verdicts_path = Path(args.verdicts or ROOT / "generator" / f"verdicts_{args.retriever}.csv")
-    run_path = Path(args.run or ROOT / "retrieval" / "runs" / f"{args.retriever}.jsonl")
-    out_path = Path(args.output or ROOT / "analysis" / f"metrics_{args.retriever}.json")
+    version = "v2" if "v2" in args.retriever else "v1"
+    base = ROOT / "results" / "dense" / version
+    if version == "v2":
+        default_verdicts = base / "verdicts" / f"verdicts_{args.retriever}.csv"
+        default_run = base / "runs" / f"{args.retriever}.jsonl"
+    else:
+        default_verdicts = base / f"verdicts_{args.retriever}.csv"
+        default_run = base / ("dense.jsonl" if args.retriever == "dense" else f"{args.retriever}.jsonl")
+    verdicts_path = Path(args.verdicts or default_verdicts)
+    run_path = Path(args.run or default_run)
+    out_path = Path(args.output or base / f"metrics_{args.retriever}.json")
 
     queries = load_queries(Path(args.queries))
     verdicts = load_verdicts(verdicts_path)
