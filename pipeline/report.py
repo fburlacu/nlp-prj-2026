@@ -8,6 +8,10 @@ read from results/ until a new run of the same name exists under runs/. The
 other ten are included after they are written. Paired differences use
 title_bm25_none as the baseline when that run is present.
 
+Dev expects all 12, including rewrite. Test expects the title with BM25 or
+dense and every reranker, plus pure late with no reranker. Rewrite is not
+listed as missing on test. A cost table is written beside the retrieval scores.
+
 Retrieval uses retrieval/eval_retrieval.py. Verdicts use analysis/eval_detection.py,
 and only the files written by generator/generator.py, so every system is scored
 with the same prompt.
@@ -19,7 +23,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from pipeline.cli import OPTIONAL, ROOT, cells, mode_name
+from pipeline.cli import OPTIONAL, ROOT, cells, mode_name, test_cells
 
 HISTORICAL = {
     "dev": {
@@ -39,7 +43,8 @@ EXTRA = OPTIONAL
 
 def _runs(split):
     found, missing = [], []
-    for query, retriever, reranker in cells():
+    grid = list(test_cells() if split == "test" else cells())
+    for query, retriever, reranker in grid:
         name = mode_name(query, retriever, reranker)
         folder = ROOT / "runs" / split / name
         parquet = folder / f"{name}.parquet"
@@ -50,12 +55,13 @@ def _runs(split):
             found.append((name, historical, None, None))
         else:
             missing.append(name)
-    for name in EXTRA:
+    extras = () if split == "test" else EXTRA
+    for name in extras:
         folder = ROOT / "runs" / split / name
         parquet = folder / f"{name}.parquet"
         if parquet.exists():
             found.append((name, parquet, folder / "passages.parquet", folder / "verdicts.csv"))
-    order = {mode_name(*cell): i for i, cell in enumerate(cells())}
+    order = {mode_name(*cell): i for i, cell in enumerate(grid)}
     extra_order = {name: i for i, name in enumerate(EXTRA)}
     found.sort(key=lambda item: (
         item[0] != BASELINE,
@@ -162,6 +168,9 @@ def report(split, query_set=None):
     included = ", ".join(name for name, *_ in found)
     absent = ", ".join(missing) if missing else "none"
     baseline = found[0][0]
+    from pipeline.cost import section
+    cost_md = section(found, split)
+    (destination / "cost.md").write_text("# Cost, " + split + "\n\n" + cost_md, encoding="utf-8")
     header = [
         f"# Comparison, {split}",
         "",
@@ -174,7 +183,12 @@ def report(split, query_set=None):
         "A run with no rows for a query set is scored as a miss on that set.",
         "",
     ]
-    body = "\n".join(header) + retrieval_md
+    if split == "test":
+        header += [
+            "Test uses the title. BM25 and dense are paired with no reranker, the cross-encoder, or late interaction. Pure late is not reranked. Rewrite stays in the dev comparison.",
+            "",
+        ]
+    body = "\n".join(header) + cost_md + retrieval_md
     if detection_md:
         body += "\n" + detection_md
     report_path = destination / "comparison.md"

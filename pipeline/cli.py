@@ -10,22 +10,29 @@ python main.py --retriever dense still runs title + dense + no rerank, then the 
 import argparse
 import json
 import sys
+import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 QUERIES = ("title", "rewrite")
 RETRIEVERS = ("bm25", "dense")
-FIRST_STAGE = (*RETRIEVERS, "late", "cross")
-OPTIONAL = ("title_late_none", "title_cross_none", "title_bm25_late_k200", "title_dense_late_k200")
+FIRST_STAGE = (*RETRIEVERS, "late")
+OPTIONAL = ("title_late_none", "title_bm25_late_k200", "title_dense_late_k200")
 RERANKERS = ("none", "cross", "late")
 ALIASES = {"sparse": "bm25", "cross-encoder": "cross", "late-interaction": "late"}
 
 
-def cells():
-    for query in QUERIES:
+def cells(queries=None):
+    for query in QUERIES if queries is None else queries:
         for retriever in RETRIEVERS:
             for reranker in RERANKERS:
                 yield query, retriever, reranker
+
+
+def test_cells():
+    """Title only. BM25 and dense take every reranker. Pure late is not reranked."""
+    yield from cells(("title",))
+    yield "title", "late", "none"
 
 
 def mode_name(query, retriever, reranker, k=100):
@@ -50,6 +57,7 @@ def _canonical(value, allowed):
 def run_cell(args):
     if args.retriever == "hybrid":
         raise SystemExit("hybrid is not one of the 12 systems. Choose bm25 or dense, then a reranker.")
+    from pipeline.cost import attach_timing, counts, gpu_reset, summarize
     from pipeline.rerank import CROSS_MODEL, LATE_MODEL, rerank
     from pipeline.retrieve import load_queries, retrieve, search_strings
     from pipeline.store import write_run
@@ -57,8 +65,9 @@ def run_cell(args):
     query = _canonical(args.query, QUERIES)
     retriever = _canonical(args.retriever, FIRST_STAGE)
     reranker = _canonical(args.reranker, RERANKERS)
-    if retriever == reranker and retriever in {"late", "cross"}:
-        print("The first stage already uses this model; the reranker scores it again on the top k.")
+    if retriever == "late" and reranker != "none":
+        print("Late interaction already scored every passage. This run keeps that ranking and does not rerank.")
+        reranker = "none"
     if retriever == "dense" and args.reindex:
         from retrieval.dense import build_index, query_prompt_for
         model_name = "BAAI/bge-small-en-v1.5"
@@ -72,15 +81,24 @@ def run_cell(args):
     queries = load_queries(ROOT / "data" / "queries_v2.csv", args.split, args.set, args.limit)
     searches = search_strings(queries, query, ROOT / "runs" / "rewrite.csv")
     print(f"{mode_name(query, retriever, reranker, args.k)}: {len(queries)} claims, {len(searches)} searches, k={args.k}")
+    gpu_reset()
+    started = time.perf_counter()
     ranked, lookup = retrieve(
         retriever, searches, args.k,
         passages_path=ROOT / "data" / "passages_v2.parquet",
         index_dir=ROOT / "retrieval" / "indexes" / "dense_v2",
         batch_size=args.batch_size, device=args.device, k1=args.k1, b=args.b,
     )
+    retrieve_s = time.perf_counter() - started
     claims = dict(zip(queries["query_id"], queries["text"]))
     texts = dict(zip(lookup["passage_id"], lookup["text"]))
+    started = time.perf_counter()
     ranked = rerank(ranked, claims, texts, reranker, device=args.device, batch_size=args.batch_size)
+    rerank_s = time.perf_counter() - started
+    cost = attach_timing(
+        counts(retriever, reranker, searches, ranked),
+        retrieve_s, rerank_s,
+    )
 
     name = mode_name(query, retriever, reranker, args.k)
     directory = ROOT / "runs" / (args.split or "all") / name
@@ -96,14 +114,16 @@ def run_cell(args):
         "filters": {"split": args.split, "set": args.set, "limit": args.limit},
         "rewrite": str((ROOT / "runs" / "rewrite.csv").resolve()) if query == "rewrite" else None,
         "word_limit": 400,
+        "cost": cost,
         "note": (
-            f"{retriever} searches every v2 passage in the claim's set and keeps the top k. "
+            "late searches every v2 passage in the claim's set and keeps the top k. "
             "Each passage is clipped to 400 words. This is not one of the 12 systems."
-            if retriever in {"late", "cross"} else
+            if retriever == "late" else
             "The reranker scores the original claim against the first 400 words of each passage. "
             "Rewritten queries are fused into the first-stage list, and the title is one of those queries."
         ),
     }
+    print(summarize(cost))
     _, jsonl = write_run(ranked, lookup, claims, directory, name, config)
     if args.retrieve_only:
         _print_score_command(directory, name, args.split)
@@ -168,7 +188,7 @@ def parser():
 
     run = sub.add_parser("run", parents=[parent], help="retrieve, optionally rerank, optionally judge")
     run.add_argument("--query", choices=[*QUERIES], default="title")
-    run.add_argument("--retriever", default="dense", help="bm25, dense, late, or cross. late and cross can search the whole passage set")
+    run.add_argument("--retriever", default="dense", help="bm25, dense, or late. late searches the whole passage set")
     run.add_argument("--reranker", default="none", help="none, cross, or late")
     run.add_argument("--k", type=int, default=100, help="passages kept. k other than 100 is written to its own folder")
     run.add_argument("--k1", type=float, default=1.2)

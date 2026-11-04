@@ -73,29 +73,44 @@ python main.py report --split dev
 
 `report` writes `results/comparison/<split>/comparison.md`. It scores every system that already has a run, with `title_bm25_none` as the baseline, and lists the systems that have not been run. The two finished title systems are included from `results/` until a new run replaces them.
 
-Four dev checks sit outside the 12. A `k` other than 100 is stored in its own folder, so it does not replace the run at `k=100`. `title_late_none` and `title_cross_none` each search every v2 passage, with no BM25 or dense list in front. The other two ask the late reranker to reorder 200 passages instead of 100. The cross-encoder scores every claim–passage pair from scratch, so that run is the slow one.
+Three dev checks sit outside the 12. A `k` other than 100 is stored in its own folder, so it does not replace the run at `k=100`. `title_late_none` searches every v2 passage with late interaction and no BM25 or dense list in front. The other two ask the late reranker to reorder 200 passages instead of 100. Each run prints a cost line and stores it in `<name>.config.json`: wall time, GPU peak, score counts, and the stored dense-index size. `python main.py report` copies that into `results/comparison/<split>/cost.md`.
 
 ```bash
 export CUDA_VISIBLE_DEVICES=0
 python main.py run --query title --retriever late --reranker none --split dev --retrieve-only
-python main.py run --query title --retriever cross --reranker none --split dev --retrieve-only
 python main.py run --query title --retriever bm25 --reranker late --k 200 --split dev --retrieve-only
 python main.py run --query title --retriever dense --reranker late --k 200 --split dev --retrieve-only
 python main.py report --split dev
+```
+
+Rewrite is unchanged. `python main.py rewrite` and every `rewrite_*` dev run stay as they are. Test does not call rewrite, because those runs did not raise Hit@5.
+
+The test grid is the title, then BM25, dense, or late interaction over every passage, then a reranker. BM25 and dense use no reranker, the cross-encoder, or late interaction. Pure late already scored every passage, so that run stops there. The k=200 checks stay on dev. On this two-A10 container, GPU 0 was free and GPU 1 was already taken; check `nvidia-smi` before changing the device. The report fills in time and GPU peak for these runs.
+
+```bash
+export CUDA_VISIBLE_DEVICES=0
+for retriever in bm25 dense; do
+  for reranker in none cross late; do
+    python main.py run --query title --retriever $retriever --reranker $reranker \
+      --split test --retrieve-only
+  done
+done
+python main.py run --query title --retriever late --reranker none --split test --retrieve-only
+python main.py report --split test
 ```
 
 `sparse` is accepted as `bm25`. `--retrieve-only` skips the verdict model, which is what you want while comparing rankings. Omit it to score the top 5 with Llama after retrieval. A run is written to `runs/dev/<query>_<retriever>_<reranker>/`. The printed `eval_retrieval.py` command is the report.
 
 The dense index is still `retrieval/indexes/dense_v2`. `--reindex` rebuilds it. Rewritten queries are cached in `runs/rewrite.csv`, so a second `rewrite` continues rather than starting over. `--questions` defaults to 10, matching the paper. `--limit 5` is a smoke test.
 
-GPU 0 is often already in use. Prefix the commands with `CUDA_VISIBLE_DEVICES=1`.
+On the two-A10 container, GPU 0 was free and GPU 1 was already in use. Check `nvidia-smi` and point `CUDA_VISIBLE_DEVICES` at a free card.
 
 ## Run
 
 From the repository root. This writes a new index and does not reuse `retrieval/indexes/dense`:
 
 ```bash
-CUDA_VISIBLE_DEVICES=1 python main.py --retriever dense --retrieve-only
+CUDA_VISIBLE_DEVICES=0 python main.py --retriever dense --retrieve-only
 ```
 
 Omit `--retrieve-only` to also run the verdict model. Omit `--model` to use Llama 3.1 8B. That model does not fit a 16 GB T4 in full precision; pass `--model HuggingFaceTB/SmolLM2-1.7B-Instruct` for the verdict, and the same flag to `rewrite` if Llama does not load. The first dense run embeds the v2 passages and, only after the batch bar reaches 100%, writes:

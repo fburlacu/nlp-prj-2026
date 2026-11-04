@@ -3,5 +3,6 @@
 query:      title | rewrite
 first stage: bm25 | dense
 reranker:   none | cross | late
-A late or cross-encoder first stage, and late reranking at k=200, are optional dev checks outside this grid.
+Rewrite stays in this grid. Test uses the title only: BM25 or dense with
+none, cross, or late, plus late interaction over every passage and no reranker.
 """
