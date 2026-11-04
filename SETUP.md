@@ -73,11 +73,12 @@ python main.py report --split dev
 
 `report` writes `results/comparison/<split>/comparison.md`. It scores every system that already has a run, with `title_bm25_none` as the baseline, and lists the systems that have not been run. The two finished title systems are included from `results/` until a new run replaces them.
 
-Three dev checks sit outside the 12. A `k` other than 100 is stored in its own folder, so it does not replace the run at `k=100`. `title_late_none` searches every v2 passage with late interaction. The other two ask the late reranker to reorder 200 passages instead of 100.
+Four dev checks sit outside the 12. A `k` other than 100 is stored in its own folder, so it does not replace the run at `k=100`. `title_late_none` and `title_cross_none` each search every v2 passage, with no BM25 or dense list in front. The other two ask the late reranker to reorder 200 passages instead of 100. The cross-encoder scores every claim–passage pair from scratch, so that run is the slow one.
 
 ```bash
 export CUDA_VISIBLE_DEVICES=0
 python main.py run --query title --retriever late --reranker none --split dev --retrieve-only
+python main.py run --query title --retriever cross --reranker none --split dev --retrieve-only
 python main.py run --query title --retriever bm25 --reranker late --k 200 --split dev --retrieve-only
 python main.py run --query title --retriever dense --reranker late --k 200 --split dev --retrieve-only
 python main.py report --split dev

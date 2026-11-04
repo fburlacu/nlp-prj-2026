@@ -3,5 +3,5 @@
 query:      title | rewrite
 first stage: bm25 | dense
 reranker:   none | cross | late
-A late first stage, and late reranking at k=200, are optional dev checks outside this grid.
+A late or cross-encoder first stage, and late reranking at k=200, are optional dev checks outside this grid.
 """

@@ -150,6 +150,83 @@ def _dense_lists(searches, index_dir, k, batch_size, device):
     return lists, meta
 
 
+def _passages_by_set(passages, searches):
+    """Clipped passage text for every set a query will search."""
+    needed = set(searches["set"].astype(str))
+    from pipeline.rerank import clip_words
+
+    by_set = {}
+    for name, idx in passages.groupby(passages["set"].astype(str)).indices.items():
+        if name not in needed:
+            continue
+        pos = np.asarray(idx)
+        texts = [clip_words(text, 400) for text in passages["text"].iloc[pos].tolist()]
+        by_set[name] = (pos, texts, {int(global_i): local for local, global_i in enumerate(pos)})
+    return by_set
+
+
+def _exclusion_maps(passages):
+    row_of = {pid: i for i, pid in enumerate(passages["passage_id"])}
+    rows_of_doc = {}
+    for i, key in enumerate(passages["doc_key"].tolist()):
+        if key:
+            rows_of_doc.setdefault(key, []).append(i)
+    return row_of, rows_of_doc, passages["passage_id"].to_numpy()
+
+
+def _apply_bans(scores, row, local_of, row_of, rows_of_doc):
+    banned = [row_of[p] for p in str(row.exclude_passage_ids).split("|") if p in row_of]
+    banned += [i for key in str(row.exclude_doc_key).split("|") if key for i in rows_of_doc.get(key, [])]
+    for global_i in banned:
+        local = local_of.get(global_i)
+        if local is not None:
+            scores[local] = -np.inf
+    return scores
+
+
+def _top_passage_ids(scores, pos, pid, k):
+    finite = np.flatnonzero(np.isfinite(scores))
+    if len(finite) == 0:
+        return []
+    keep = min(k, len(finite))
+    chosen = finite[np.argpartition(-scores[finite], keep - 1)[:keep]]
+    chosen = chosen[np.argsort(-scores[chosen], kind="stable")]
+    return [pid[pos[i]] for i in chosen]
+
+
+def _cross_lists(passages, searches, k, batch_size, device):
+    """Cross-encoder over every passage in the claim's set. Each pair is a forward pass."""
+    from pipeline.rerank import CROSS_MODEL, _as_scores
+    from sentence_transformers import CrossEncoder
+
+    model = CrossEncoder(CROSS_MODEL, device=device)
+    by_set = _passages_by_set(passages, searches)
+    for name, (_, texts, _) in by_set.items():
+        print(f"{name}: {len(texts)} passages will be scored with {CROSS_MODEL} for each claim")
+    row_of, rows_of_doc, pid = _exclusion_maps(passages)
+    lists = []
+    total = len(searches)
+    for done, row in enumerate(searches.itertuples(index=False), 1):
+        packed = by_set.get(str(row.set))
+        if packed is None:
+            lists.append((row.query_id, []))
+            continue
+        pos, texts, local_of = packed
+        parts = []
+        for start in range(0, len(texts), batch_size):
+            documents = texts[start:start + batch_size]
+            pairs = [(row.text, document) for document in documents]
+            parts.append(_as_scores(model.predict(pairs, batch_size=batch_size, show_progress_bar=False)))
+        scores = np.concatenate(parts) if parts else np.zeros(0, dtype=np.float32)
+        if len(scores) != len(texts):
+            raise SystemExit(f"cross search returned {len(scores)} scores for {len(texts)} passages")
+        scores = _apply_bans(scores, row, local_of, row_of, rows_of_doc)
+        lists.append((row.query_id, _top_passage_ids(scores, pos, pid, k)))
+        print(f"  searched {done}/{total}", end="\r")
+    print()
+    return lists
+
+
 def _late_lists(passages, searches, k, batch_size, device):
     """Late interaction over every passage in the claim's set. Not a rerank of another list."""
     from pipeline.rerank import LATE_MODEL, _as_scores, clip_words
@@ -227,6 +304,10 @@ def retrieve(retriever, searches, k, passages_path, index_dir, batch_size, devic
     elif retriever == "late":
         passages = load_bm25_passages(passages_path)
         lists = _late_lists(passages, searches, k, batch_size, device)
+        lookup = passages
+    elif retriever == "cross":
+        passages = load_bm25_passages(passages_path)
+        lists = _cross_lists(passages, searches, k, batch_size, device)
         lookup = passages
     else:
         raise SystemExit(f"unknown retriever {retriever}")

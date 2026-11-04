@@ -19,7 +19,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from pipeline.cli import ROOT, cells, mode_name
+from pipeline.cli import OPTIONAL, ROOT, cells, mode_name
 
 HISTORICAL = {
     "dev": {
@@ -34,7 +34,7 @@ HISTORICAL = {
 PASSAGES_FOR_EVAL = ROOT / "results" / "dense" / "v2" / "reports" / "passages_for_eval.parquet"
 BASELINE = "title_bm25_none"
 # Dev checks outside the 12. Included only when that run is on disk.
-EXTRA = ("title_late_none", "title_bm25_late_k200", "title_dense_late_k200")
+EXTRA = OPTIONAL
 
 
 def _runs(split):
