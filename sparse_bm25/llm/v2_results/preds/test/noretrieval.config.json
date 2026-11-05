@@ -2,46 +2,63 @@
   "model": "meta-llama/Llama-3.1-8B-Instruct",
   "device": "cuda",
   "dtype": "torch.bfloat16",
-  "created_utc": "2026-11-04T15:40:46+00:00",
-  "command": "detect.py --queries ../../data/queries_v2.csv --sets main article --split test --batch_size 16 --output v2_results/preds/test/noretrieval.csv",
+  "created_utc": "2026-11-05T09:22:31+00:00",
+  "command": "detect.py --prompt fewshot --queries ../../data/queries_v2.csv --sets main article --split test --output v2_results/preds_fewshot/test/noretrieval.csv",
   "mode": "no_retrieval",
   "params": {
     "k": 0,
-    "batch_size": 16,
+    "batch_size": 8,
     "max_passage_words": 800,
     "answers": {
-      "false": "disinformation",
-      "true": "fact",
-      "unknown": "inconclusive"
+      "disinformation": "disinformation",
+      "fact": "fact",
+      "inconclusive": "inconclusive"
     },
     "answer_tokens": {
-      "false": [
-        "false",
-        "False",
-        "FALSE"
+      "disinformation": [
+        "dis",
+        "Dis",
+        "\u0120dis",
+        "\u0120Dis"
       ],
-      "true": [
-        "true",
-        "True",
-        "TRUE"
+      "fact": [
+        "fact",
+        "Fact",
+        "\u0120fact",
+        "\u0120Fact"
       ],
-      "unknown": [
-        "Unknown",
-        "unknown",
-        "UNKNOWN"
+      "inconclusive": [
+        "in",
+        "In",
+        "\u0120incon",
+        "\u0120In"
       ]
     },
     "scoring": "next-token probability mass per answer word, renormalised; argmax"
   },
   "prompt": {
-    "system": "You are a fact-checking assistant. You judge whether a claim is disinformation, using only the evidence you are given. Answer with exactly one word: false, true or unknown.",
-    "user": "Claim: {claim}\n\nNo evidence is available. Based on your own knowledge, is the claim:\nfalse - the claim is false or a known disinformation narrative\ntrue - the claim is true\nunknown - you cannot decide\n\nAnswer with one word (false, true or unknown).",
-    "passage_types": {
-      "eeas_claim": "EUvsDisinfo database: documented disinformation claim",
-      "eeas_disproof": "EUvsDisinfo database: analysts' refutation",
-      "article": "News article",
-      "leite_article": "News article"
-    }
+    "variant": "fewshot",
+    "system": "You check a news claim against retrieved evidence. Reply with exactly one word: disinformation, fact, or inconclusive. disinformation means the evidence refutes the claim. fact means the evidence supports the claim. inconclusive means the evidence is missing, off-topic, or not enough to decide.",
+    "examples": [
+      [
+        "NATO troops are fighting in Ukraine",
+        "[1] NATO has not deployed combat troops to Ukraine. Member states provide equipment and training only.",
+        "disinformation"
+      ],
+      [
+        "The EU adopted a new sanctions package against Russian banks",
+        "[1] EU countries agreed a further sanctions package targeting Russian banks and energy revenue.",
+        "fact"
+      ],
+      [
+        "A meteor destroyed the Kerch bridge",
+        "[1] The claim that Western biolabs operate in Ukraine is unsupported. No such laboratories exist.",
+        "inconclusive"
+      ]
+    ],
+    "user": "Claim: {claim}\n\nEvidence:\n{evidence}",
+    "no_evidence": "(no evidence retrieved)",
+    "passage_types": null
   },
   "filters": {
     "split": "test",
@@ -62,17 +79,15 @@
   "counts": {
     "n_predictions": 1104,
     "pred_distribution": {
-      "inconclusive": 971,
-      "fact": 74,
-      "disinformation": 59
+      "inconclusive": 1104
     }
   },
   "timing_this_session": {
-    "model_load_s": 65.8,
+    "model_load_s": 6.6,
     "n_queries": 1104,
-    "llm_s_per_query": 0.1437,
-    "prompt_tokens_mean": 140.6,
-    "gpu_peak_mem_gb": 15.62
+    "llm_s_per_query": 0.0619,
+    "prompt_tokens_mean": 248.6,
+    "gpu_peak_mem_gb": 15.48
   },
-  "prompt_tokens_mean_all": 140.6
+  "prompt_tokens_mean_all": 248.6
 }

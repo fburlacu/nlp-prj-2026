@@ -2,25 +2,35 @@
 (RAG) or no evidence at all (--run omitted: no-retrieval baseline).
 
 Usage (from sparse_bm25/llm/; see run.md):
-  python detect.py --run ../v2_results/runs_tune/bm25_dev_k1-1.2_b-0.75.parquet --split dev \
-                   --output v2_results/preds/dev/bm25_k5.csv [--k 5 --limit 20]
-  python detect.py --split dev --output v2_results/preds/dev/noretrieval.csv   # no-retrieval baseline
+  python detect.py --prompt fewshot --run ../v2_results/runs_tune/bm25_dev_k1-1.2_b-0.75.parquet --split dev \
+                   --output v2_results/preds_fewshot/dev/bm25_k5.csv [--k 5 --limit 20]
+  python detect.py --prompt fewshot --split dev --output v2_results/preds_fewshot/dev/noretrieval.csv  # no retrieval
 Defaults are the v2 files (data/passages_v2.parquet, data/queries_v2.csv) and the main set only, since v2
 retrieval runs on the main set only. v1: --passages ../../data/passages.parquet --queries ../../data/queries.csv
 --sets main article --max_passage_words 250.
 Writes
   <output>.csv          query_id, set, split, label, pred, p_disinformation, p_fact, p_inconclusive,
-                        passage_ids, n_prompt_tokens
+                        passage_ids, n_prompt_tokens, prompt
   <output>.config.json  model, prompt, k, inputs (with hashes), timing and GPU memory
-The run is resumable: queries already in <output>.csv are skipped.
+The run is resumable: queries already in <output>.csv are skipped. Resuming into a file written with the
+other --prompt variant is refused, so a new variant always needs a new --output.
+
+Prompt variants (--prompt, required):
+  zeroshot  the original v2 prompt (v2_results/preds_run1): answer words false / true / unknown, a definition
+            of each in the user message, passages labelled with their type, a separate no-retrieval prompt
+  fewshot   the prompt of generator/generator.py, used for the dense run, so BM25 and dense differ only in the
+            retriever: answer words disinformation / fact / inconclusive, three worked examples as chat turns,
+            untyped passages ([n] text); without retrieval the evidence is "(no evidence retrieved)"
 
 Verdict scoring: no sampling. The answer is read from the next-token distribution after the prompt:
-the probability mass of each answer word (summed over 'false' / 'False' / 'FALSE' etc.) is
-renormalised over the three answers, and the prediction is the most probable one. This is
-deterministic and gives probabilities for precision-recall analysis.
-  false   -> disinformation    the evidence refutes the claim / shows a documented disinformation narrative
-  true    -> fact              the evidence supports the claim
-  unknown -> inconclusive      the evidence is not sufficient
+the probability mass of each answer word's tokens is renormalised over the three answers, and the
+prediction is the most probable one. This is deterministic and gives probabilities for precision-recall analysis.
+  zeroshot  single-token spellings (false / False / FALSE etc.)
+  fewshot   first token of each spelling (word, Word, ' word', ' Word'); a token claimed by two answers is
+            dropped, as in generator.py. The tokens used are printed and stored in the config.
+  false / disinformation  -> disinformation
+  true / fact             -> fact
+  unknown / inconclusive  -> inconclusive
 """
 import sys
 import json
@@ -37,42 +47,46 @@ from huggingface_hub import try_to_load_from_cache
 from transformers import AutoTokenizer, AutoModelForCausalLM
 
 MODEL = "meta-llama/Llama-3.1-8B-Instruct"
-ANSWERS = {"disinformation", "fact", "inconclusive"}
-# passage type (v1 doc_type / v2 source) -> label shown to the model
+# answer word -> label, per prompt variant
+ANSWERS = {"zeroshot": {"false": "disinformation", "true": "fact", "unknown": "inconclusive"},
+           "fewshot": {"disinformation": "disinformation", "fact": "fact", "inconclusive": "inconclusive"}}
+# passage type (v1 doc_type / v2 source) -> label shown to the model (zeroshot only)
 TYPE_NAME = {"eeas_claim": "EUvsDisinfo database: documented disinformation claim",
              "eeas_disproof": "EUvsDisinfo database: analysts' refutation",
              "article": "News article", "leite_article": "News article"}
 
-# SYSTEM = ("You are a fact-checking assistant. You judge whether a claim is disinformation, using only "
-#           "the evidence you are given. Answer with exactly one word: false, true or unknown.")
-# RAG_PROMPT = """Claim: {claim}
+# ---------------- zeroshot: the original v2 prompt ----------------
+ZS_SYSTEM = ("You are a fact-checking assistant. You judge whether a claim is disinformation, using only "
+             "the evidence you are given. Answer with exactly one word: false, true or unknown.")
+ZS_RAG_PROMPT = """Claim: {claim}
 
-# Evidence:
-# {evidence}
+Evidence:
+{evidence}
 
-# Based only on the evidence above, is the claim:
-# false - the evidence refutes the claim, or shows that it is a documented disinformation narrative
-# true - the evidence supports the claim
-# unknown - the evidence is not sufficient to decide
+Based only on the evidence above, is the claim:
+false - the evidence refutes the claim, or shows that it is a documented disinformation narrative
+true - the evidence supports the claim
+unknown - the evidence is not sufficient to decide
 
-# Answer with one word (false, true or unknown)."""
-# NO_RAG_PROMPT = """Claim: {claim}
+Answer with one word (false, true or unknown)."""
+ZS_NO_RAG_PROMPT = """Claim: {claim}
 
-# No evidence is available. Based on your own knowledge, is the claim:
-# false - the claim is false or a known disinformation narrative
-# true - the claim is true
-# unknown - you cannot decide
+No evidence is available. Based on your own knowledge, is the claim:
+false - the claim is false or a known disinformation narrative
+true - the claim is true
+unknown - you cannot decide
 
-# Answer with one word (false, true or unknown)."""
+Answer with one word (false, true or unknown)."""
 
-SYSTEM = (
+# ---------------- fewshot: identical to generator/generator.py ----------------
+FS_SYSTEM = (
     "You check a news claim against retrieved evidence. "
     "Reply with exactly one word: disinformation, fact, or inconclusive. "
     "disinformation means the evidence refutes the claim. "
     "fact means the evidence supports the claim. "
     "inconclusive means the evidence is missing, off-topic, or not enough to decide."
 )
-EXAMPLES = [
+FS_EXAMPLES = [
     (
         "NATO troops are fighting in Ukraine",
         "[1] NATO has not deployed combat troops to Ukraine. "
@@ -92,10 +106,13 @@ EXAMPLES = [
         "inconclusive",
     ),
 ]
-INSTRUCTION = "Claim: {claim}\n\nEvidence:\n{evidence}"
+FS_INSTRUCTION = "Claim: {claim}\n\nEvidence:\n{evidence}"
+FS_NO_EVIDENCE = "(no evidence retrieved)"
 
 HERE = Path(__file__).resolve().parent
 ap = argparse.ArgumentParser()
+ap.add_argument("--prompt", required=True, choices=list(ANSWERS),
+                help="prompt variant: zeroshot (original v2, preds_run1) or fewshot (as generator/generator.py)")
 ap.add_argument("--run", help="retrieval run file (.parquet); omit for the no-retrieval baseline")
 ap.add_argument("--passages", default=str(HERE.parent.parent / "data" / "passages_v2.parquet"))
 ap.add_argument("--queries", default=str(HERE.parent.parent / "data" / "queries_v2.csv"))
@@ -111,6 +128,7 @@ ap.add_argument("--max_passage_words", type=int, default=800,
 ap.add_argument("--batch_size", type=int, default=8, help="lower it if long prompts run out of GPU memory")
 a = ap.parse_args()
 SETS, BATCH_SIZE, MAX_PASSAGE_WORDS = a.sets, a.batch_size, a.max_passage_words
+ANS = ANSWERS[a.prompt]
 
 split = lambda s: [x for x in str(s).split("|") if x and x != "nan"]
 
@@ -153,13 +171,22 @@ def shorten(text):
 
 
 def prompt(q):
-    if not a.run:
-        user = NO_RAG_PROMPT.format(claim=q.text)
-    else:
-        ev = "\n\n".join(f"[{i}] ({TYPE_NAME[passages.at[p, 'doc_type']]}) {shorten(passages.at[p, 'text'])}"
-                         for i, p in enumerate(evidence_ids[q.query_id], 1))
-        user = RAG_PROMPT.format(claim=q.text, evidence=ev)
-    msgs = [{"role": "system", "content": SYSTEM}, {"role": "user", "content": user}]
+    ids = evidence_ids.get(q.query_id, [])
+    if a.prompt == "zeroshot":
+        if not a.run:
+            user = ZS_NO_RAG_PROMPT.format(claim=q.text)
+        else:
+            ev = "\n\n".join(f"[{i}] ({TYPE_NAME[passages.at[p, 'doc_type']]}) {shorten(passages.at[p, 'text'])}"
+                             for i, p in enumerate(ids, 1))
+            user = ZS_RAG_PROMPT.format(claim=q.text, evidence=ev)
+        msgs = [{"role": "system", "content": ZS_SYSTEM}, {"role": "user", "content": user}]
+    else:  # fewshot: same messages as generator.build_messages
+        ev = "\n\n".join(f"[{i}] {shorten(passages.at[p, 'text']).strip()}" for i, p in enumerate(ids, 1))
+        msgs = [{"role": "system", "content": FS_SYSTEM}]
+        for claim, evidence, answer in FS_EXAMPLES:
+            msgs += [{"role": "user", "content": FS_INSTRUCTION.format(claim=claim, evidence=evidence)},
+                     {"role": "assistant", "content": answer}]
+        msgs.append({"role": "user", "content": FS_INSTRUCTION.format(claim=q.text, evidence=ev or FS_NO_EVIDENCE)})
     return tok.apply_chat_template(msgs, tokenize=False, add_generation_prompt=True)
 
 
@@ -190,20 +217,43 @@ fwd_params = inspect.signature(model.forward).parameters
 LAST_ONLY = ({"logits_to_keep": 1} if "logits_to_keep" in fwd_params else
              {"num_logits_to_keep": 1} if "num_logits_to_keep" in fwd_params else {})
 
-# token ids of every single-token spelling of each answer word
 answer_ids = {}
-for w in ANSWERS:
-    ids = {tok.encode(v, add_special_tokens=False)[0] for v in [w, w.capitalize(), w.upper()]
-           if len(tok.encode(v, add_special_tokens=False)) == 1}
-    if not ids:
-        sys.exit(f"answer word '{w}' is not a single token for {MODEL}")
-    answer_ids[w] = sorted(ids)
+if a.prompt == "zeroshot":
+    # token ids of every single-token spelling of each answer word
+    for w in ANS:
+        ids = {tok.encode(v, add_special_tokens=False)[0] for v in [w, w.capitalize(), w.upper()]
+               if len(tok.encode(v, add_special_tokens=False)) == 1}
+        if not ids:
+            sys.exit(f"answer word '{w}' is not a single token for {MODEL}")
+        answer_ids[w] = sorted(ids)
+else:
+    # first token of each spelling; a token claimed by two answers is dropped (generator.class_token_ids)
+    taken = {}
+    for w in ANS:
+        ids = []
+        for v in [w, w.capitalize(), " " + w, " " + w.capitalize()]:
+            enc = tok.encode(v, add_special_tokens=False)
+            if not enc or taken.get(enc[0], w) != w:
+                continue
+            taken[enc[0]] = w
+            if enc[0] not in ids:
+                ids.append(enc[0])
+        if not ids:
+            sys.exit(f"answer word '{w}' has no unique first token for {MODEL}")
+        answer_ids[w] = ids
 print("Answer tokens:", {w: tok.convert_ids_to_tokens(i) for w, i in answer_ids.items()})
 
 # ---------------- resume ----------------
 out = Path(a.output)
 out.parent.mkdir(parents=True, exist_ok=True)
-done = set(pd.read_csv(out, dtype=str)["query_id"]) if out.exists() else set()
+done = set()
+if out.exists():
+    prev = pd.read_csv(out, dtype=str, keep_default_na=False)
+    # files from before --prompt existed have no prompt column and were written with the zeroshot prompt
+    variants = set(prev["prompt"]) if "prompt" in prev else {"zeroshot"}
+    if variants != {a.prompt}:
+        sys.exit(f"{out} was written with prompt {sorted(variants)}, not {a.prompt}: use a new --output")
+    done = set(prev["query_id"])
 todo = queries[~queries["query_id"].isin(done)]
 print(f"{len(queries)} queries | {len(done)} already done | {len(todo)} to do | k={a.k if a.run else 0}", flush=True)
 
@@ -228,10 +278,11 @@ for start in range(0, len(rows_q), BATCH_SIZE):
     n_tokens += lens
     rows = []
     for q, m, n in zip(batch, mass, lens):
-        p = dict(zip(ANSWERS.values(), m.round(5)))
+        p = dict(zip(ANS.values(), m.round(5)))
         rows.append({"query_id": q.query_id, "set": q.set, "split": q.split, "label": q.label,
                      "pred": max(p, key=p.get), **{f"p_{k}": v for k, v in p.items()},
-                     "passage_ids": "|".join(evidence_ids.get(q.query_id, [])), "n_prompt_tokens": n})
+                     "passage_ids": "|".join(evidence_ids.get(q.query_id, [])), "n_prompt_tokens": n,
+                     "prompt": a.prompt})
     pd.DataFrame(rows).to_csv(out, mode="a", header=not out.exists(), index=False)
     print(f"  {min(start + BATCH_SIZE, len(rows_q))}/{len(rows_q)}", flush=True)
 
@@ -243,9 +294,13 @@ config = {
     "command": " ".join(sys.argv),
     "mode": "rag" if a.run else "no_retrieval",
     "params": {"k": a.k if a.run else 0, "batch_size": BATCH_SIZE, "max_passage_words": MAX_PASSAGE_WORDS,
-               "answers": ANSWERS, "answer_tokens": {w: tok.convert_ids_to_tokens(i) for w, i in answer_ids.items()},
+               "answers": ANS, "answer_tokens": {w: tok.convert_ids_to_tokens(i) for w, i in answer_ids.items()},
                "scoring": "next-token probability mass per answer word, renormalised; argmax"},
-    "prompt": {"system": SYSTEM, "user": RAG_PROMPT if a.run else NO_RAG_PROMPT, "passage_types": TYPE_NAME},
+    "prompt": ({"variant": "zeroshot", "system": ZS_SYSTEM, "user": ZS_RAG_PROMPT if a.run else ZS_NO_RAG_PROMPT,
+                "passage_types": TYPE_NAME}
+               if a.prompt == "zeroshot" else
+               {"variant": "fewshot", "system": FS_SYSTEM, "examples": FS_EXAMPLES, "user": FS_INSTRUCTION,
+                "no_evidence": None if a.run else FS_NO_EVIDENCE, "passage_types": None}),
     "filters": {"split": a.split, "sets": SETS, "limit": a.limit},
     "inputs": {"run": str(Path(a.run).resolve()) if a.run else None, "run_sha256": sha256(a.run) if a.run else None,
                "passages": str(Path(a.passages).resolve()) if a.run else None,

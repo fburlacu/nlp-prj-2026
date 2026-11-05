@@ -2,46 +2,63 @@
   "model": "meta-llama/Llama-3.1-8B-Instruct",
   "device": "cuda",
   "dtype": "torch.bfloat16",
-  "created_utc": "2026-11-04T15:44:14+00:00",
-  "command": "detect.py --run ../v2_results/runs_test/default/bm25_test_k1-1.2_b-0.75.parquet --passages ../../data/passages_v2.parquet --queries ../../data/queries_v2.csv --sets main article --split test --k 5 --batch_size 16 --output v2_results/preds/test/bm25_k5.csv",
+  "created_utc": "2026-11-05T09:28:36+00:00",
+  "command": "detect.py --prompt fewshot --run ../v2_results/runs_test/default/bm25_test_k1-1.2_b-0.75.parquet --passages ../../data/passages_v2.parquet --queries ../../data/queries_v2.csv --sets main article --split test --k 5 --batch_size 16 --output v2_results/preds_fewshot/test/bm25_k5.csv",
   "mode": "rag",
   "params": {
     "k": 5,
     "batch_size": 16,
     "max_passage_words": 800,
     "answers": {
-      "false": "disinformation",
-      "true": "fact",
-      "unknown": "inconclusive"
+      "disinformation": "disinformation",
+      "fact": "fact",
+      "inconclusive": "inconclusive"
     },
     "answer_tokens": {
-      "false": [
-        "false",
-        "False",
-        "FALSE"
+      "disinformation": [
+        "dis",
+        "Dis",
+        "\u0120dis",
+        "\u0120Dis"
       ],
-      "true": [
-        "true",
-        "True",
-        "TRUE"
+      "fact": [
+        "fact",
+        "Fact",
+        "\u0120fact",
+        "\u0120Fact"
       ],
-      "unknown": [
-        "Unknown",
-        "unknown",
-        "UNKNOWN"
+      "inconclusive": [
+        "in",
+        "In",
+        "\u0120incon",
+        "\u0120In"
       ]
     },
     "scoring": "next-token probability mass per answer word, renormalised; argmax"
   },
   "prompt": {
-    "system": "You are a fact-checking assistant. You judge whether a claim is disinformation, using only the evidence you are given. Answer with exactly one word: false, true or unknown.",
-    "user": "Claim: {claim}\n\nEvidence:\n{evidence}\n\nBased only on the evidence above, is the claim:\nfalse - the evidence refutes the claim, or shows that it is a documented disinformation narrative\ntrue - the evidence supports the claim\nunknown - the evidence is not sufficient to decide\n\nAnswer with one word (false, true or unknown).",
-    "passage_types": {
-      "eeas_claim": "EUvsDisinfo database: documented disinformation claim",
-      "eeas_disproof": "EUvsDisinfo database: analysts' refutation",
-      "article": "News article",
-      "leite_article": "News article"
-    }
+    "variant": "fewshot",
+    "system": "You check a news claim against retrieved evidence. Reply with exactly one word: disinformation, fact, or inconclusive. disinformation means the evidence refutes the claim. fact means the evidence supports the claim. inconclusive means the evidence is missing, off-topic, or not enough to decide.",
+    "examples": [
+      [
+        "NATO troops are fighting in Ukraine",
+        "[1] NATO has not deployed combat troops to Ukraine. Member states provide equipment and training only.",
+        "disinformation"
+      ],
+      [
+        "The EU adopted a new sanctions package against Russian banks",
+        "[1] EU countries agreed a further sanctions package targeting Russian banks and energy revenue.",
+        "fact"
+      ],
+      [
+        "A meteor destroyed the Kerch bridge",
+        "[1] The claim that Western biolabs operate in Ukraine is unsupported. No such laboratories exist.",
+        "inconclusive"
+      ]
+    ],
+    "user": "Claim: {claim}\n\nEvidence:\n{evidence}",
+    "no_evidence": null,
+    "passage_types": null
   },
   "filters": {
     "split": "test",
@@ -62,17 +79,17 @@
   "counts": {
     "n_predictions": 1104,
     "pred_distribution": {
-      "disinformation": 754,
-      "fact": 238,
-      "inconclusive": 112
+      "disinformation": 501,
+      "inconclusive": 446,
+      "fact": 157
     }
   },
   "timing_this_session": {
-    "model_load_s": 2.3,
+    "model_load_s": 6.2,
     "n_queries": 1104,
-    "llm_s_per_query": 0.1121,
-    "prompt_tokens_mean": 1319.5,
-    "gpu_peak_mem_gb": 27.37
+    "llm_s_per_query": 0.3072,
+    "prompt_tokens_mean": 1371.7,
+    "gpu_peak_mem_gb": 27.48
   },
-  "prompt_tokens_mean_all": 1319.5
+  "prompt_tokens_mean_all": 1371.7
 }
